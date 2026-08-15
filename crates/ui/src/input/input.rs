@@ -126,6 +126,7 @@ pub struct Input {
     role: RoleOverride,
     accessibility_id: Option<SharedString>,
     aria_label: Option<SharedString>,
+    aria_description: Option<SharedString>,
 
     /// An optional context menu builder to allow a custom context menu on the input.
     ///
@@ -197,6 +198,7 @@ impl Input {
             role: RoleOverride::default(),
             accessibility_id: None,
             aria_label: None,
+            aria_description: None,
             context_menu_builder: None,
         }
     }
@@ -209,6 +211,11 @@ impl Input {
 
     pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
         self.aria_label = Some(label.into());
+        self
+    }
+
+    pub fn aria_description(mut self, description: impl Into<SharedString>) -> Self {
+        self.aria_description = Some(description.into());
         self
     }
 
@@ -553,6 +560,9 @@ impl RenderOnce for Input {
             .role(accessibility_role)
             .when_some(self.accessibility_id, |this, id| this.accessibility_id(id))
             .when_some(aria_label, |this, label| this.aria_label(label))
+            .when_some(self.aria_description, |this, description| {
+                this.aria_description(description)
+            })
             .when_some(placeholder, |this, placeholder| {
                 this.aria_placeholder(placeholder)
             })
@@ -839,16 +849,16 @@ mod tests {
     }
 
     #[gpui::test]
-    fn input_emits_accessibility_id(cx: &mut gpui::TestAppContext) {
+    fn input_emits_accessibility_metadata(cx: &mut gpui::TestAppContext) {
         use crate::ElementExt as _;
         use gpui::{AppContext as _, Element as _, IntoElement as _, Render};
         use std::sync::{Arc, Mutex};
 
-        type EmittedIds = Vec<Option<String>>;
+        type EmittedMetadata = Vec<(Option<String>, Option<String>)>;
 
         struct InputA11yProbe {
             state: Entity<InputState>,
-            emitted: Arc<Mutex<EmittedIds>>,
+            emitted: Arc<Mutex<EmittedMetadata>>,
         }
 
         impl Render for InputA11yProbe {
@@ -860,18 +870,25 @@ mod tests {
                 let state = self.state.clone();
                 let emitted = self.emitted.clone();
                 div().on_prepaint(move |_, window, cx| {
-                    let mut author_id_of = |input: Input| {
+                    let mut metadata_of = |input: Input| {
                         let mut node = gpui::accesskit::Node::new(Role::TextInput);
                         input
                             .render(window, cx)
                             .into_element()
                             .write_a11y_info(&mut node);
-                        node.author_id().map(ToOwned::to_owned)
+                        (
+                            node.author_id().map(ToOwned::to_owned),
+                            node.description().map(ToOwned::to_owned),
+                        )
                     };
 
                     *emitted.lock().unwrap() = vec![
-                        author_id_of(Input::new(&state)),
-                        author_id_of(Input::new(&state).accessibility_id("search.query")),
+                        metadata_of(Input::new(&state)),
+                        metadata_of(
+                            Input::new(&state)
+                                .accessibility_id("search.query")
+                                .aria_description("Search all sessions"),
+                        ),
                     ];
                 })
             }
@@ -890,7 +907,13 @@ mod tests {
 
         assert_eq!(
             *captured.lock().unwrap(),
-            vec![None, Some("search.query".into())]
+            vec![
+                (None, None),
+                (
+                    Some("search.query".into()),
+                    Some("Search all sessions".into())
+                )
+            ]
         );
     }
 
