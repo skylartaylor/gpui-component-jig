@@ -21,6 +21,7 @@ fn shape_label(
         len: text.len(),
         font: window.text_style().font(),
         color,
+        letter_spacing: None,
         background_color: None,
         underline: None,
         strikethrough: None,
