@@ -91,6 +91,7 @@ impl<M: InputModeKind> TextElement<M> {
                 len: column,
                 font: style.font(),
                 color: Hsla::default(),
+                letter_spacing: None,
                 background_color: None,
                 strikethrough: None,
                 underline: None,
