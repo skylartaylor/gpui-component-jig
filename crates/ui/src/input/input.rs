@@ -127,6 +127,7 @@ pub struct Input {
     accessibility_id: Option<SharedString>,
     aria_label: Option<SharedString>,
     aria_description: Option<SharedString>,
+    aria_invalid: bool,
 
     /// An optional context menu builder to allow a custom context menu on the input.
     ///
@@ -199,6 +200,7 @@ impl Input {
             accessibility_id: None,
             aria_label: None,
             aria_description: None,
+            aria_invalid: false,
             context_menu_builder: None,
         }
     }
@@ -216,6 +218,11 @@ impl Input {
 
     pub fn aria_description(mut self, description: impl Into<SharedString>) -> Self {
         self.aria_description = Some(description.into());
+        self
+    }
+
+    pub fn aria_invalid(mut self, invalid: bool) -> Self {
+        self.aria_invalid = invalid;
         self
     }
 
@@ -563,6 +570,7 @@ impl RenderOnce for Input {
             .when_some(self.aria_description, |this, description| {
                 this.aria_description(description)
             })
+            .aria_invalid(self.aria_invalid)
             .when_some(placeholder, |this, placeholder| {
                 this.aria_placeholder(placeholder)
             })
@@ -854,7 +862,7 @@ mod tests {
         use gpui::{AppContext as _, Element as _, IntoElement as _, Render};
         use std::sync::{Arc, Mutex};
 
-        type EmittedMetadata = Vec<(Option<String>, Option<String>)>;
+        type EmittedMetadata = Vec<(Option<String>, Option<String>, bool)>;
 
         struct InputA11yProbe {
             state: Entity<InputState>,
@@ -879,6 +887,7 @@ mod tests {
                         (
                             node.author_id().map(ToOwned::to_owned),
                             node.description().map(ToOwned::to_owned),
+                            node.invalid().is_some(),
                         )
                     };
 
@@ -887,7 +896,8 @@ mod tests {
                         metadata_of(
                             Input::new(&state)
                                 .accessibility_id("search.query")
-                                .aria_description("Search all sessions"),
+                                .aria_description("Search all sessions")
+                                .aria_invalid(true),
                         ),
                     ];
                 })
@@ -908,10 +918,11 @@ mod tests {
         assert_eq!(
             *captured.lock().unwrap(),
             vec![
-                (None, None),
+                (None, None, false),
                 (
                     Some("search.query".into()),
-                    Some("Search all sessions".into())
+                    Some("Search all sessions".into()),
+                    true,
                 )
             ]
         );
