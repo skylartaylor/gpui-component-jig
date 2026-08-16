@@ -115,6 +115,7 @@ impl RenderOnce for Textarea {
         Input::from_state(self.state.clone())
             .appearance(self.appearance)
             .bordered(self.bordered)
+            .focus_bordered(false)
             .disabled(self.disabled)
             .readonly(self.readonly)
             .tab_index(self.tab_index)
