@@ -53,8 +53,15 @@ pub struct Root {
     /// Window-level text selection state. See `text::window_selection`.
     pub(crate) text_selection: WindowTextSelection,
     /// Selectable TextViews registered this frame, keyed by entity id.
-    pub(crate) selectable_text_views:
-        HashMap<EntityId, (WeakEntity<TextViewState>, Hitbox, SelectionScope)>,
+    pub(crate) selectable_text_views: HashMap<
+        EntityId,
+        (
+            WeakEntity<TextViewState>,
+            Hitbox,
+            SelectionScope,
+            Option<SharedString>,
+        ),
+    >,
     /// Inline text bounds for selectable TextViews, keyed by parent TextView id.
     pub(crate) selectable_text_inlines: HashMap<EntityId, Vec<Bounds<Pixels>>>,
 }

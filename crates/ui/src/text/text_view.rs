@@ -67,6 +67,7 @@ pub struct TextView {
     text_view_style: TextViewStyle,
     style: StyleRefinement,
     selectable: bool,
+    selection_group: Option<SharedString>,
     selection_format: SelectionFormat,
     scrollable: bool,
     code_block_actions: Option<Arc<CodeBlockActionsFn>>,
@@ -108,6 +109,7 @@ impl TextView {
             text_view_style: TextViewStyle::default(),
             style: StyleRefinement::default(),
             selectable: false,
+            selection_group: None,
             selection_format: SelectionFormat::default(),
             scrollable: false,
             code_block_actions: None,
@@ -126,6 +128,7 @@ impl TextView {
             style: StyleRefinement::default(),
             state: None,
             selectable: false,
+            selection_group: None,
             selection_format: SelectionFormat::default(),
             scrollable: false,
             code_block_actions: None,
@@ -144,6 +147,7 @@ impl TextView {
             style: StyleRefinement::default(),
             state: None,
             selectable: false,
+            selection_group: None,
             selection_format: SelectionFormat::default(),
             scrollable: false,
             code_block_actions: None,
@@ -161,6 +165,16 @@ impl TextView {
     /// Set the text view to be selectable, default is false.
     pub fn selectable(mut self, selectable: bool) -> Self {
         self.selectable = selectable;
+        self
+    }
+
+    /// Keep a selection within text views that share this group.
+    ///
+    /// By default, selectable text views can participate in a single window
+    /// selection. Set a group on independently selectable regions such as
+    /// split panes to prevent a drag from extending into another region.
+    pub fn selection_group(mut self, group: impl Into<SharedString>) -> Self {
+        self.selection_group = Some(group.into());
         self
     }
 
@@ -396,7 +410,13 @@ impl Element for TextView {
         if self.selectable {
             // Register before painting children so this frame's Inline paint can
             // repopulate the text bounds after stale ones are cleared.
-            crate::Root::register_selectable_text_view(state, hitbox, window, cx);
+            crate::Root::register_selectable_text_view(
+                state,
+                hitbox,
+                self.selection_group.clone(),
+                window,
+                cx,
+            );
         }
 
         UiGlobalState::global_mut(cx)

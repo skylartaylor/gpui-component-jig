@@ -480,7 +480,19 @@ impl TextViewState {
             return None;
         }
         let root = window.root::<crate::Root>().flatten()?;
-        let selection = &root.read(cx).text_selection;
+        let root = root.read(cx);
+        let selection = &root.text_selection;
+        let selection_group = root
+            .selectable_text_views
+            .get(&self.entity_id)
+            .and_then(|(_, _, _, group)| group.as_ref());
+        let anchor_group = selection
+            .anchor
+            .as_ref()
+            .and_then(|endpoint| endpoint.selection_group.as_ref());
+        if selection_group != anchor_group {
+            return None;
+        }
         if let Some(view_id) = selection.single_view() {
             if view_id != self.entity_id {
                 return None;

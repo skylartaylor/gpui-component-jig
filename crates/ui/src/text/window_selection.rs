@@ -3,7 +3,7 @@ use std::ops::RangeInclusive;
 use gpui::{
     App, Bounds, Context, Element, ElementId, Entity, EntityId, GlobalElementId, Hitbox,
     InspectorElementId, IntoElement, LayoutId, MouseButton, MouseDownEvent, MouseMoveEvent,
-    MouseUpEvent, Pixels, Point, ScrollWheelEvent, Style, WeakEntity, Window,
+    MouseUpEvent, Pixels, Point, ScrollWheelEvent, SharedString, Style, WeakEntity, Window,
 };
 
 use crate::{
@@ -182,6 +182,9 @@ pub(crate) struct SelectionEndpoint {
     /// True when the endpoint hit an Inline text run, not just blank space in
     /// the parent TextView bounds.
     pub(crate) inside_text: bool,
+    /// The selection group of the view that owns this endpoint. A drag only
+    /// considers views in the same group, preserving pane-local selection.
+    pub(super) selection_group: Option<SharedString>,
     /// The top-level block `point` falls in, for a scrollable (virtualized)
     /// view. Resolved once, while the block is on screen, because the block
     /// stops reporting its selection as soon as it scrolls out of view (see
@@ -270,6 +273,7 @@ impl Root {
     pub(crate) fn register_selectable_text_view(
         state: &Entity<TextViewState>,
         hitbox: &Hitbox,
+        selection_group: Option<SharedString>,
         window: &mut Window,
         cx: &mut App,
     ) {
@@ -287,8 +291,9 @@ impl Root {
             // per frame across N selectable views), acceptable for typical view
             // counts; revisit if a window ever hosts hundreds of selectable views.
             root.selectable_text_views
-                .retain(|_, (view, _, _)| view.upgrade().is_some());
-            root.selectable_text_views.insert(id, (weak, hitbox, scope));
+                .retain(|_, (view, _, _, _)| view.upgrade().is_some());
+            root.selectable_text_views
+                .insert(id, (weak, hitbox, scope, selection_group));
             root.selectable_text_inlines.remove(&id);
         });
     }
@@ -321,7 +326,7 @@ impl Root {
         if self.text_selection.resolved_points(cx).is_some() {
             return true;
         }
-        self.selectable_text_views.values().any(|(view, _, _)| {
+        self.selectable_text_views.values().any(|(view, _, _, _)| {
             view.upgrade()
                 .is_some_and(|view| view.read(cx).has_view_selection())
         })
@@ -345,12 +350,18 @@ impl Root {
         let anchor_scope = self.active_selection_scope();
 
         let mut items: Vec<(Point<Pixels>, String)> = Vec::new();
-        for (id, (view, _, scope)) in self.selectable_text_views.iter() {
+        let selection_group = self
+            .text_selection
+            .anchor
+            .as_ref()
+            .and_then(|endpoint| endpoint.selection_group.as_ref());
+        for (id, (view, _, scope, view_group)) in self.selectable_text_views.iter() {
             let Some(view) = view.upgrade() else { continue };
             let state = view.read(cx);
             let in_window_selection = resolved.is_some()
                 && state.is_selectable()
                 && *scope == anchor_scope
+                && view_group.as_ref() == selection_group
                 && single_view.map_or(true, |v| v == *id);
             if !state.has_view_selection() && !in_window_selection {
                 continue;
@@ -388,7 +399,7 @@ impl Root {
         self.text_selection.pending_extension_anchor = None;
         self.text_selection.is_selecting = false;
         self.text_selection.did_hit_text = false;
-        self.selectable_text_views.retain(|_, (view, _, _)| {
+        self.selectable_text_views.retain(|_, (view, _, _, _)| {
             let Some(view) = view.upgrade() else {
                 return false;
             };
@@ -442,7 +453,7 @@ impl Root {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let endpoint = self.text_selection_endpoint(position, window, cx);
+        let endpoint = self.text_selection_endpoint(position, None, window, cx);
         // Components that own their own mouse-down interaction (Input, Button,
         // etc.) set `GlobalState::suppress_text_selection` in their bubble-phase
         // handler; the controller checks that flag before calling this, so a
@@ -509,7 +520,12 @@ impl Root {
         // matters: read the old points first, then update the cursor, then read
         // the new points.
         let old_points = self.text_selection.resolved_points(cx);
-        let endpoint = self.text_selection_endpoint(position, window, cx);
+        let selection_group = self
+            .text_selection
+            .anchor
+            .as_ref()
+            .and_then(|endpoint| endpoint.selection_group.as_ref());
+        let endpoint = self.text_selection_endpoint(position, Some(selection_group), window, cx);
         self.text_selection.did_hit_text |= endpoint.inside_text;
         self.text_selection.cursor = Some(endpoint);
         let new_points = self.text_selection.resolved_points(cx);
@@ -595,6 +611,7 @@ impl Root {
     fn text_selection_endpoint(
         &self,
         position: Point<Pixels>,
+        selection_group: Option<Option<&SharedString>>,
         window: &Window,
         cx: &App,
     ) -> SelectionEndpoint {
@@ -610,8 +627,11 @@ impl Root {
         // a one-frame lag that is negligible for mouse-driven selection.
         // Smallest-area wins as a proxy for the innermost (topmost) view when
         // TextViews overlap.
-        for (view, hitbox, view_scope) in self.selectable_text_views.values() {
+        for (view, hitbox, view_scope, view_group) in self.selectable_text_views.values() {
             if *view_scope != scope {
+                continue;
+            }
+            if selection_group.is_some_and(|group| view_group.as_ref() != group) {
                 continue;
             }
             if view.upgrade().is_none() {
@@ -640,6 +660,7 @@ impl Root {
                 view: Some(view),
                 inside: true,
                 inside_text,
+                selection_group: view_group.clone(),
                 block_ix: state.block_ix_at(point.y),
             };
         }
@@ -654,8 +675,11 @@ impl Root {
         // it is a pure relative offset.
         let mut predecessor: Option<(WeakEntity<TextViewState>, Pixels)> = None;
         let mut first: Option<(WeakEntity<TextViewState>, Pixels)> = None;
-        for (view, _, view_scope) in self.selectable_text_views.values() {
+        for (view, _, view_scope, view_group) in self.selectable_text_views.values() {
             if *view_scope != scope {
+                continue;
+            }
+            if selection_group.is_some_and(|group| view_group.as_ref() != group) {
                 continue;
             }
             let Some(entity) = view.upgrade() else {
@@ -686,6 +710,7 @@ impl Root {
                             view: Some(view),
                             inside: false,
                             inside_text: false,
+                            selection_group: view_group.clone(),
                             block_ix: state.block_ix_at(point.y),
                         }
                     }
@@ -694,6 +719,7 @@ impl Root {
                         point: position,
                         inside: false,
                         inside_text: false,
+                        selection_group: None,
                         block_ix: None,
                     },
                 }
@@ -703,13 +729,14 @@ impl Root {
                 point: position,
                 inside: false,
                 inside_text: false,
+                selection_group: None,
                 block_ix: None,
             },
         }
     }
 
     fn notify_selectable_text_views(&mut self, cx: &mut Context<Self>) {
-        self.selectable_text_views.retain(|_, (view, _, _)| {
+        self.selectable_text_views.retain(|_, (view, _, _, _)| {
             let Some(view) = view.upgrade() else {
                 return false;
             };
@@ -742,7 +769,7 @@ impl Root {
         // view too.
         if old_points.is_none() {
             if let Some(id) = self.text_selection.single_view() {
-                if let Some((view, _, _)) = self.selectable_text_views.get(&id) {
+                if let Some((view, _, _, _)) = self.selectable_text_views.get(&id) {
                     if let Some(view) = view.upgrade() {
                         view.update(cx, |_, cx| cx.notify());
                     }
@@ -767,16 +794,25 @@ impl Root {
             (None, None) => return,
         };
 
-        self.selectable_text_views.retain(|_, (view, _, _)| {
-            let Some(view) = view.upgrade() else {
-                return false;
-            };
-            let bounds = view.read(cx).bounds();
-            if bounds.top() <= band_max && bounds.bottom() >= band_min {
-                view.update(cx, |_, cx| cx.notify());
-            }
-            true
-        });
+        let selection_group = self
+            .text_selection
+            .anchor
+            .as_ref()
+            .and_then(|endpoint| endpoint.selection_group.as_ref());
+        self.selectable_text_views
+            .retain(|_, (view, _, _, view_group)| {
+                if view_group.as_ref() != selection_group {
+                    return view.upgrade().is_some();
+                }
+                let Some(view) = view.upgrade() else {
+                    return false;
+                };
+                let bounds = view.read(cx).bounds();
+                if bounds.top() <= band_max && bounds.bottom() >= band_min {
+                    view.update(cx, |_, cx| cx.notify());
+                }
+                true
+            });
     }
 }
 
@@ -936,7 +972,8 @@ mod tests {
     use gpui::{
         AppContext as _, Context, Entity, FocusHandle, InteractiveElement as _, IntoElement,
         Modifiers, MouseButton, MouseDownEvent, MouseUpEvent, ParentElement as _, Render,
-        Styled as _, TestAppContext, VisualTestContext, Window, div, point, px,
+        Styled as _, TestAppContext, VisualTestContext, Window, div, point,
+        prelude::FluentBuilder as _, px,
     };
     use std::cell::Cell;
     use std::rc::Rc;
@@ -947,6 +984,8 @@ mod tests {
         first: Entity<TextViewState>,
         second: Entity<TextViewState>,
         second_selectable: bool,
+        first_selection_group: Option<&'static str>,
+        second_selection_group: Option<&'static str>,
         /// Top padding above the views. Bumping it shifts the whole content
         /// down, which is the layout-level equivalent of an outer container
         /// scrolling (see `selection_follows_content_when_layout_shifts`).
@@ -963,9 +1002,22 @@ mod tests {
                 first: cx.new(|cx| TextViewState::markdown("Hello world", cx)),
                 second: cx.new(|cx| TextViewState::markdown("Second message", cx)),
                 second_selectable,
+                first_selection_group: None,
+                second_selection_group: None,
                 top_offset: px(10.),
                 mid_gap: px(0.),
             }
+        }
+
+        fn with_selection_groups(
+            first_selection_group: &'static str,
+            second_selection_group: &'static str,
+            cx: &mut Context<Self>,
+        ) -> Self {
+            let mut view = Self::new(true, cx);
+            view.first_selection_group = Some(first_selection_group);
+            view.second_selection_group = Some(second_selection_group);
+            view
         }
     }
 
@@ -982,18 +1034,26 @@ mod tests {
                 .size_full()
                 .pt(self.top_offset)
                 .child(
-                    div()
-                        .h(px(40.))
-                        .child(TextView::new(&self.first).selectable(true)),
+                    div().h(px(40.)).child(
+                        TextView::new(&self.first)
+                            .selectable(true)
+                            .when_some(self.first_selection_group, |view, group| {
+                                view.selection_group(group)
+                            }),
+                    ),
                 )
                 // A blank gap between the two views. It is not over any
                 // TextView hitbox, so a press here exercises the blank-space
                 // (proxy-anchored) endpoint path.
                 .child(div().h(self.mid_gap))
                 .child(
-                    div()
-                        .h(px(40.))
-                        .child(TextView::new(&self.second).selectable(self.second_selectable)),
+                    div().h(px(40.)).child(
+                        TextView::new(&self.second)
+                            .selectable(self.second_selectable)
+                            .when_some(self.second_selection_group, |view, group| {
+                                view.selection_group(group)
+                            }),
+                    ),
                 )
                 // A 20px region below the views that owns its press the way
                 // Input/Button do: its bubble-phase handler sets the suppress
@@ -1015,6 +1075,22 @@ mod tests {
         cx.update(crate::init);
         let (root, cx) = cx.add_window_view(|window, cx| {
             let chat = cx.new(|cx| ChatTestView::new(second_selectable, cx));
+            Root::new(chat, window, cx)
+        });
+        let chat = root.read_with(cx, |root, _| {
+            root.view().clone().downcast::<ChatTestView>().unwrap()
+        });
+        cx.run_until_parked();
+        cx.update(|window, cx| {
+            let _ = window.draw(cx);
+        });
+        (chat, cx)
+    }
+
+    fn setup_grouped(cx: &mut TestAppContext) -> (Entity<ChatTestView>, &mut VisualTestContext) {
+        cx.update(crate::init);
+        let (root, cx) = cx.add_window_view(|window, cx| {
+            let chat = cx.new(|cx| ChatTestView::with_selection_groups("first", "second", cx));
             Root::new(chat, window, cx)
         });
         let chat = root.read_with(cx, |root, _| {
@@ -1510,6 +1586,17 @@ mod tests {
             .expect("second view text missing");
         assert!(first < second, "wrong order: {text:?}");
         assert!(text.contains('\n'), "expected newline separator: {text:?}");
+    }
+
+    #[gpui::test]
+    fn selection_group_prevents_cross_view_drag(cx: &mut TestAppContext) {
+        let (_, cx) = setup_grouped(cx);
+
+        drag(cx, point(px(0.), px(15.)), point(px(300.), px(70.)));
+
+        let text = window_selected_text(cx);
+        assert!(text.contains("Hello world"), "got: {text:?}");
+        assert!(!text.contains("Second message"), "got: {text:?}");
     }
 
     #[gpui::test]
