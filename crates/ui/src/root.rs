@@ -51,6 +51,7 @@ pub struct Root {
     pending_focus_restore: Option<WeakFocusHandle>,
     window_id: gpui::WindowId,
     next_text_selection_scope: u64,
+    active_root_text_selection_scope: Option<SelectionScopeId>,
 }
 
 #[derive(Clone)]
@@ -116,6 +117,7 @@ impl Root {
             pending_focus_restore: None,
             window_id: window.window_handle().window_id(),
             next_text_selection_scope: 1,
+            active_root_text_selection_scope: None,
         }
     }
 
@@ -125,7 +127,12 @@ impl Root {
         scope
     }
 
+    #[cfg(test)]
     pub(crate) fn active_text_selection_scope(&self) -> SelectionScopeId {
+        self.modal_text_selection_scope().unwrap_or_default()
+    }
+
+    fn modal_text_selection_scope(&self) -> Option<SelectionScopeId> {
         self.active_dialogs
             .last()
             .map(|dialog| dialog.selection_scope)
@@ -134,7 +141,20 @@ impl Root {
                     .as_ref()
                     .map(|sheet| sheet.selection_scope)
             })
-            .unwrap_or_default()
+    }
+
+    fn update_text_selection_scope(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let active_scope = self.modal_text_selection_scope();
+        if active_scope == self.active_root_text_selection_scope {
+            return;
+        }
+
+        gpui_base::WindowTextSelection::set_text_selection_scope(
+            window,
+            active_scope.unwrap_or_default(),
+            cx,
+        );
+        self.active_root_text_selection_scope = active_scope;
     }
 
     /// Enable or disable the Linux client-side window border wrapper.
@@ -579,8 +599,7 @@ impl Render for Root {
         }
         crate::global_state::UiGlobalState::global_mut(cx).begin_selection_frame();
         let text_selection = TextSelection::new(window, cx);
-        let active_scope = self.active_text_selection_scope();
-        gpui_base::WindowTextSelection::set_text_selection_scope(window, active_scope, cx);
+        self.update_text_selection_scope(window, cx);
 
         let inner = div()
             .id("root")
@@ -613,13 +632,36 @@ impl Render for Root {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use gpui::TestAppContext;
+    use gpui::{HitboxBehavior, ParentElement as _, TestAppContext};
+    use gpui_base::{SelectionRegionFrame, TextSelectionRegion, WindowTextSelection};
 
     struct TestView;
 
     impl Render for TestView {
         fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
             div()
+        }
+    }
+
+    struct ScopedSelectionView {
+        region: TextSelectionRegion,
+        scope: SelectionScopeId,
+    }
+
+    impl Render for ScopedSelectionView {
+        fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+            let region = self.region.clone();
+            TextSelection::scope(
+                self.scope,
+                div().size_full().on_prepaint(move |bounds, window, cx| {
+                    let hitbox = window.insert_hitbox(bounds, HitboxBehavior::Normal);
+                    window.register_text_selection_region(
+                        region,
+                        SelectionRegionFrame::new(hitbox, bounds).with_text_bounds(vec![bounds]),
+                        cx,
+                    );
+                }),
+            )
         }
     }
 
@@ -644,5 +686,45 @@ mod tests {
             Root::new(view, window, cx).bordered(false).bordered(true)
         });
         assert!(root.read_with(cx, |root, _| root.bordered));
+    }
+
+    #[gpui::test]
+    fn background_scope_selection_survives_a_root_redraw(cx: &mut TestAppContext) {
+        cx.update(crate::init);
+
+        let scope = SelectionScopeId::new(42);
+        let (_, window_cx) = cx.add_window_view(|window, cx| {
+            let view = cx.new(|cx| ScopedSelectionView {
+                region: TextSelectionRegion::new("scoped text", cx),
+                scope,
+            });
+            Root::new(view, window, cx)
+        });
+
+        window_cx.update(|window, cx| {
+            let _ = window.draw(cx);
+            window.set_text_selection_scope(scope, cx);
+        });
+        cx.simulate_mouse_down(
+            gpui::point(gpui::px(10.), gpui::px(10.)),
+            gpui::MouseButton::Left,
+            gpui::Modifiers::default(),
+        );
+        cx.simulate_mouse_move(
+            gpui::point(gpui::px(80.), gpui::px(10.)),
+            Some(gpui::MouseButton::Left),
+            gpui::Modifiers::default(),
+        );
+        cx.simulate_mouse_up(
+            gpui::point(gpui::px(80.), gpui::px(10.)),
+            gpui::MouseButton::Left,
+            gpui::Modifiers::default(),
+        );
+        window_cx.update(|window, cx| assert!(window.has_text_selection(cx)));
+
+        window_cx.update(|window, cx| {
+            let _ = window.draw(cx);
+            assert!(window.has_text_selection(cx));
+        });
     }
 }
