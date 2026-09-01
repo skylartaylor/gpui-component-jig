@@ -3033,6 +3033,7 @@ dependencies = [
  "gpui_ce_components_base",
  "gpui_ce_platform",
  "log",
+ "palette",
  "syntect",
  "tracing-wasm",
  "wasm-bindgen",
