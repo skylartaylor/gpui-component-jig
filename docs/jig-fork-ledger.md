@@ -213,8 +213,13 @@ same remaining ambiguity in the brush story between GPUI's current
 `StatefulInteractiveElement::on_prepaint` and the component extension trait.
 `d06e5352` explicitly selects `gpui_component::ElementExt::on_prepaint`,
 preserving the original canvas-bounds callback semantics. Its exact-head hosted
-rerun and Jig application-level verification remain pending. The evidence refs
-are published; the runtime and component adoption tags remain pending.
+rerun (`33562699035` at `206fad07b973c37634b42c2789da71b13225aa27`)
+passed documentation, Component Shell, Shell Core, and the Standard Runtime
+matrix on all three platforms. The three full Test jobs then failed only because
+the explicit call made the imported extension trait unused. `14b5c0ff` removes
+that obsolete import. Its exact-head hosted rerun and Jig application-level
+verification remain pending. The evidence refs are published; the runtime and
+component adoption tags remain pending.
 
 ## Bounded external review record
 
