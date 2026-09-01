@@ -58,7 +58,9 @@ The local implementation queue is:
   imports the current runtime color extension, and keeps the shell outside the
   intentionally disabled registry release graph; and
 - `46912ca6` restores the rquickjs 0.12 import-attribute resolver and loader
-  signatures retained by Longbridge.
+  signatures retained by Longbridge; and
+- `911ed35d` completes example, story, component-shell, and shell-test
+  compatibility across the hosted target matrix.
 
 | Conflicted path | Resolution |
 | --- | --- |
@@ -167,7 +169,7 @@ incompatibility warning.
 
 These checks predate the bounded-review remediation commit and remain historical
 evidence rather than proof of the current candidate. The current candidate
-implementation commit `46912ca61bba4e606fa8ba5a545d732facc2cc0a`
+implementation commit `911ed35df74231118864abb61e8ad4283d2da757`
 is paired with published runtime commit
 `7bcc3ebc46d88f4c4c4fc21365825fe3dff2054b`. It has passed
 `cargo fmt --all -- --check`, `git diff --check`, `actionlint` for both workflow
@@ -196,10 +198,17 @@ compilation on macOS, Linux, and Windows, then failed on the same three
 diagnostics: the HostModule resolver and loader still had the prior rquickjs
 0.11 arities, and the explicit prepaint call left one trait import unused.
 `46912ca6` restores Longbridge's rquickjs 0.12 `ImportAttributes` signatures and
-removes that import. Its exact-head hosted rerun, full workspace, all-target,
-cross-platform, example/story, shell, and Jig application-level verification
-remain pending. The evidence refs are published; the runtime and component
-adoption tags remain pending.
+removes that import. The next hosted run (`33559853051` at
+`2443a8bc4bba94ae9293946d211c311c7807f6cf`) passed the complete Windows
+Standard Runtime matrix, but newly reached deeper targets exposed a missing
+WASM example palette dependency, GPUI-CE color-extension imports in four story
+files, a test-only `Eq` bound unsupported by GPUI-CE colors, a manifest fixture
+pinned to the predecessor shell version, and a palette-change fixture that
+assigned the default color to itself. `911ed35d` corrects those target and test
+compatibility issues without changing component behavior. Its exact-head hosted
+rerun, full workspace, all-target, cross-platform, example/story, shell, and Jig
+application-level verification remain pending. The evidence refs are published;
+the runtime and component adoption tags remain pending.
 
 ## Bounded external review record
 
