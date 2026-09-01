@@ -269,10 +269,10 @@ mod tests {
         let dark = ColorTokens::dark();
 
         assert_eq!(ColorTokens::default(), light);
-        assert_eq!(light.background.l, 1.);
-        assert!(light.foreground.l < light.background.l);
-        assert!(dark.background.l < dark.foreground.l);
-        assert_eq!(light.primary.a, 1.);
-        assert_eq!(dark.primary.a, 1.);
+        assert_eq!(light.background.color.lightness, 1.);
+        assert!(light.foreground.color.lightness < light.background.color.lightness);
+        assert!(dark.background.color.lightness < dark.foreground.color.lightness);
+        assert_eq!(light.primary.alpha, 1.);
+        assert_eq!(dark.primary.alpha, 1.);
     }
 }

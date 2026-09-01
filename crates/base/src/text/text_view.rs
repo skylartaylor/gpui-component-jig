@@ -807,8 +807,8 @@ mod tests {
         cx.update(crate::init);
         cx.update(|cx| {
             let colors = &mut crate::Theme::global_mut(cx).tokens.colors;
-            colors.primary = gpui::rgb(0x55aaff).into();
-            colors.selection = gpui::rgb(0x335577).into();
+            colors.primary = gpui::rgb_to_hsla(gpui::rgb(0x55aaff));
+            colors.selection = gpui::rgb_to_hsla(gpui::rgb(0x335577));
         });
         let (root, cx) = cx.add_window_view(|_, cx| TextViewTestRoot::new("[link](url)", cx));
         let cx: &mut VisualTestContext = cx;
@@ -816,8 +816,8 @@ mod tests {
         cx.run_until_parked();
         root.read_with(cx, |root, cx| {
             let style = &root.text_view.read(cx).text_view_style;
-            assert_eq!(style.link(), gpui::rgb(0x55aaff).into());
-            assert_eq!(style.selection(), gpui::rgb(0x335577).into());
+            assert_eq!(style.link(), gpui::rgb_to_hsla(gpui::rgb(0x55aaff)));
+            assert_eq!(style.selection(), gpui::rgb_to_hsla(gpui::rgb(0x335577)));
         });
     }
 
@@ -1118,7 +1118,7 @@ mod tests {
             vec![(
                 0..block.code().len(),
                 gpui::HighlightStyle {
-                    color: Some(gpui::rgb(0x3366ff).into()),
+                    color: Some(gpui::rgb_to_hsla(gpui::rgb(0x3366ff))),
                     ..Default::default()
                 },
             )]
