@@ -233,7 +233,7 @@ mod tests {
         assert_eq!(parse_natural(f64::INFINITY), None);
     }
 
-    #[derive(Debug, Default, Eq, PartialEq)]
+    #[derive(Debug, Default, PartialEq)]
     struct TagState {
         size: Size,
         variant: TagVariant,

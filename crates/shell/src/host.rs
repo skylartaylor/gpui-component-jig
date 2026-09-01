@@ -1005,22 +1005,20 @@ mod tests {
         ));
         let data = root.join("data");
         std::fs::create_dir_all(&root).expect("temporary app directory");
-        std::fs::write(
-            root.join("gpui-shell.json"),
-            r#"{
+        let manifest = r#"{
               "id": "com.example.market",
               "name": "Market",
               "version": "1.0.0",
-              "shell-version": "0.1.0",
+              "shell-version": "$SHELL_VERSION",
               "entry": "main.js",
               "capabilities": {
                 "network": { "hosts": ["quotes.example.com"] },
                 "storage": true,
                 "clipboard": { "write": true }
               }
-            }"#,
-        )
-        .expect("manifest");
+            }"#
+        .replace("$SHELL_VERSION", env!("CARGO_PKG_VERSION"));
+        std::fs::write(root.join("gpui-shell.json"), manifest).expect("manifest");
 
         let manifest = read_local_manifest(&root)
             .expect("valid manifest")
