@@ -53,9 +53,10 @@ impl BaseShowcase {
 mod tests {
     use std::time::Duration;
 
+    use ::palette::IntoColor as _;
     use gpui::{
-        ColorExt as _, Modifiers, MouseButton, ScrollDelta, ScrollWheelEvent, TestAppContext,
-        VisualTestContext, point, px,
+        Modifiers, MouseButton, ScrollDelta, ScrollWheelEvent, TestAppContext, VisualTestContext,
+        point, px,
     };
     use gpui_base::{TextSelection, TextViewStyle};
 
