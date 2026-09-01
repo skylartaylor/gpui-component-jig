@@ -101,6 +101,8 @@ Until an adoption tag is published, candidate branches are review inputs rather
 than supported consumer dependencies.
 
 ```toml
+gpui = { package = "gpui-ce", git = "https://github.com/skylartaylor/gpui-ce-jig", rev = "<paired-runtime-commit>" }
+gpui_platform = { package = "gpui_ce_platform", git = "https://github.com/skylartaylor/gpui-ce-jig", rev = "<paired-runtime-commit>", features = ["font-kit"] }
 gpui-component = { package = "gpui_ce_components", git = "https://github.com/skylartaylor/gpui-component-jig", rev = "<component-commit>" }
 
 [patch.crates-io]

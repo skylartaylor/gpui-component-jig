@@ -88,6 +88,8 @@ GPUI Component 从第一天起就用于构建 [Longbridge Pro](https://longbridg
 在正式采用标签发布之前，候选分支仅用于审查，不是受支持的依赖项。
 
 ```toml
+gpui = { package = "gpui-ce", git = "https://github.com/skylartaylor/gpui-ce-jig", rev = "<paired-runtime-commit>" }
+gpui_platform = { package = "gpui_ce_platform", git = "https://github.com/skylartaylor/gpui-ce-jig", rev = "<paired-runtime-commit>", features = ["font-kit"] }
 gpui-component = { package = "gpui_ce_components", git = "https://github.com/skylartaylor/gpui-component-jig", rev = "<component-commit>" }
 
 [patch.crates-io]
