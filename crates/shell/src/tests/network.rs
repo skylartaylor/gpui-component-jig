@@ -1001,15 +1001,21 @@ fn websocket_write_rejects_after_the_server_closes(cx: &mut TestAppContext) {
     let (_runtime, view, mut context) = probe(cx, &source);
     context.run_until_parked();
     server.join().expect("WebSocket server");
-    thread::sleep(Duration::from_millis(10));
-    context.executor().advance_clock(Duration::from_millis(10));
-    context.run_until_parked();
-    draw(&mut context, &view);
-    let rendered = snapshot(&mut context, &view);
-    assert!(
-        rendered.contains("rejected:WebSocket connection is closed"),
-        "{rendered}"
-    );
+    let deadline = std::time::Instant::now() + Duration::from_secs(10);
+    loop {
+        context.executor().advance_clock(Duration::from_millis(10));
+        context.run_until_parked();
+        draw(&mut context, &view);
+        let rendered = snapshot(&mut context, &view);
+        if rendered.contains("rejected:WebSocket connection is closed") {
+            break;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "timed out waiting for the closed read and write promises: {rendered}"
+        );
+        thread::sleep(Duration::from_millis(10));
+    }
 }
 
 #[gpui::test]
