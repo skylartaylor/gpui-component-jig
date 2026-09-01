@@ -1,10 +1,10 @@
 use std::rc::Rc;
 
 use gpui::{
-    Anchor, AnyElement, App, Context, DismissEvent, ElementId, EventEmitter, FocusHandle,
-    Focusable, InteractiveElement as _, IntoElement, KeyBinding, MouseButton, ParentElement as _,
-    Render, RenderOnce, Role, StatefulInteractiveElement as _, Subscription, Window, div,
-    prelude::FluentBuilder as _,
+    Anchor, AnyElement, App, AppContext as _, Context, DismissEvent, ElementId, EventEmitter,
+    FocusHandle, Focusable, InteractiveElement as _, IntoElement, KeyBinding, MouseButton,
+    ParentElement as _, Render, RenderOnce, Role, StatefulInteractiveElement as _, Subscription,
+    Window, div, prelude::FluentBuilder as _,
 };
 
 use crate::{

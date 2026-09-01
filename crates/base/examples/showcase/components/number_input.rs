@@ -1,6 +1,6 @@
 use gpui::{
-    AnyElement, Context, InteractiveElement, IntoElement, ParentElement as _, Styled as _, div, px,
-    relative,
+    AnyElement, ColorExt as _, Context, InteractiveElement, IntoElement, ParentElement as _,
+    Styled as _, div, px, relative,
 };
 use gpui_base::{Button, NumberInput};
 

@@ -1,10 +1,10 @@
 use std::rc::Rc;
 
 use gpui::{
-    AnyElement, App, Axis, ClickEvent, ElementId, ImageSource, InteractiveElement as _,
-    IntoElement, MouseButton, ObjectFit, ParentElement, RenderOnce, SharedString,
-    StatefulInteractiveElement as _, StyleRefinement, Styled, StyledImage as _, Window, div, img,
-    prelude::FluentBuilder as _, relative, rems,
+    AnyElement, App, Axis, ClickEvent, ColorExt as _, ElementId, ImageSource,
+    InteractiveElement as _, IntoElement, MouseButton, ObjectFit, ParentElement, RenderOnce,
+    SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, StyledImage as _,
+    Window, div, img, prelude::FluentBuilder as _, relative, rems,
 };
 
 use crate::{

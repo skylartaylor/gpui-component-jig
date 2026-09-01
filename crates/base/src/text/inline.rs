@@ -6,10 +6,10 @@ use std::{
 };
 
 use gpui::{
-    App, BorderStyle, Bounds, ClickEvent, CursorStyle, Edges, Element, ElementId, GlobalElementId,
-    Half, HighlightStyle, Hitbox, HitboxBehavior, InspectorElementId, IntoElement, LayoutId,
-    MouseButton, MouseClickEvent, MouseDownEvent, MouseMoveEvent, MouseUpEvent, Pixels, Point,
-    SharedString, StyledText, TextLayout, Window, point, px, quad,
+    App, AppContext as _, BorderStyle, Bounds, ClickEvent, CursorStyle, Edges, Element, ElementId,
+    GlobalElementId, Half, HighlightStyle, Hitbox, HitboxBehavior, InspectorElementId, IntoElement,
+    LayoutId, MouseButton, MouseClickEvent, MouseDownEvent, MouseMoveEvent, MouseUpEvent, Pixels,
+    Point, SharedString, StyledText, TextLayout, Window, point, px, quad,
 };
 
 use crate::{

@@ -58,6 +58,7 @@ pub struct ColorTokens {
     /// wash that leaves the text legible. It carries a serde default so
     /// palettes written before the token existed still load.
     #[serde(default = "ColorTokens::default_selection")]
+    #[schemars(schema_with = "gpui::hsla_schemar")]
     pub selection: Hsla,
 }
 
@@ -68,6 +69,12 @@ impl Default for ColorTokens {
 }
 
 impl ColorTokens {
+    fn selection_color(hex: u32) -> Hsla {
+        let mut color = gpui::rgb_to_hsla(rgb(hex));
+        color.alpha = 0.3;
+        color
+    }
+
     /// Default light palette, aligned with gpui-component's Default Light theme.
     pub fn light() -> Self {
         Self {
@@ -88,7 +95,7 @@ impl ColorTokens {
             border: hsla(0., 0., 0.898, 1.),
             input: hsla(0., 0., 0.898, 1.),
             ring: hsla(0., 0., 0.639, 1.),
-            selection: Hsla::from(rgb(0x55a0fc)).alpha(0.3),
+            selection: Self::selection_color(0x55a0fc),
         }
     }
 
@@ -112,7 +119,7 @@ impl ColorTokens {
             border: hsla(0., 0., 0.149, 1.),
             input: hsla(0., 0., 47. / 255., 1.),
             ring: hsla(0., 0., 0.451, 1.),
-            selection: Hsla::from(rgb(0x1d4ed8)).alpha(0.3),
+            selection: Self::selection_color(0x1d4ed8),
         }
     }
 

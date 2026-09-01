@@ -1,11 +1,11 @@
 use crate::{ActiveTheme, Sizable, Size, StyledExt};
-use gpui::Bounds;
 use gpui::prelude::FluentBuilder as _;
 use gpui::{
     Animation, AnimationExt as _, AnyElement, App, ElementId, Hsla, IntoElement, ParentElement,
     Pixels, RenderOnce, SharedString, StyleRefinement, Styled, Window, canvas, ease_in_out, px,
     relative,
 };
+use gpui::{Bounds, ColorExt as _};
 use gpui_base::{Progress as BaseProgress, Transition, transition};
 use instant::Duration;
 use std::f32::consts::TAU;

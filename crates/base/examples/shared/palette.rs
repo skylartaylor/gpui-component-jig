@@ -1,5 +1,6 @@
 use std::cell::Cell;
 
+use ::palette::IntoColor as _;
 use gpui::{App, Rgba, Window, WindowAppearance};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -104,21 +105,21 @@ fn apply_base_theme(palette: ExamplePalette, cx: &mut App) {
     };
 
     let colors = &mut theme.tokens.colors;
-    colors.background = gpui::rgb(palette.canvas).into();
-    colors.foreground = gpui::rgb(palette.foreground).into();
-    colors.surface = gpui::rgb(palette.surface).into();
-    colors.surface_foreground = gpui::rgb(palette.foreground).into();
-    colors.primary = gpui::rgb(palette.accent).into();
-    colors.primary_foreground = gpui::rgb(palette.accent_foreground).into();
-    colors.secondary = gpui::rgb(palette.elevated).into();
-    colors.secondary_foreground = gpui::rgb(palette.foreground).into();
-    colors.muted = gpui::rgb(palette.elevated).into();
-    colors.muted_foreground = gpui::rgb(palette.muted_foreground).into();
-    colors.accent = gpui::rgb(palette.hover).into();
-    colors.accent_foreground = gpui::rgb(palette.foreground).into();
-    colors.border = gpui::rgb(palette.border).into();
-    colors.input = gpui::rgb(palette.border).into();
-    colors.ring = gpui::rgb(palette.accent).into();
+    colors.background = gpui::rgb(palette.canvas).into_color();
+    colors.foreground = gpui::rgb(palette.foreground).into_color();
+    colors.surface = gpui::rgb(palette.surface).into_color();
+    colors.surface_foreground = gpui::rgb(palette.foreground).into_color();
+    colors.primary = gpui::rgb(palette.accent).into_color();
+    colors.primary_foreground = gpui::rgb(palette.accent_foreground).into_color();
+    colors.secondary = gpui::rgb(palette.elevated).into_color();
+    colors.secondary_foreground = gpui::rgb(palette.foreground).into_color();
+    colors.muted = gpui::rgb(palette.elevated).into_color();
+    colors.muted_foreground = gpui::rgb(palette.muted_foreground).into_color();
+    colors.accent = gpui::rgb(palette.hover).into_color();
+    colors.accent_foreground = gpui::rgb(palette.foreground).into_color();
+    colors.border = gpui::rgb(palette.border).into_color();
+    colors.input = gpui::rgb(palette.border).into_color();
+    colors.ring = gpui::rgb(palette.accent).into_color();
 }
 
 pub fn example_rgb(color: u32) -> Rgba {
@@ -157,8 +158,11 @@ mod tests {
         cx.update(|cx| {
             let theme = gpui_base::Theme::global(cx);
             assert_eq!(theme.appearance, gpui_base::ThemeAppearance::Dark);
-            assert_eq!(theme.tokens.colors.foreground, gpui::rgb(0xffffff).into());
-            assert_eq!(theme.tokens.colors.border, gpui::rgb(0x404040).into());
+            assert_eq!(
+                theme.tokens.colors.foreground,
+                gpui::rgb(0xffffff).into_color()
+            );
+            assert_eq!(theme.tokens.colors.border, gpui::rgb(0x404040).into_color());
         });
     }
 }

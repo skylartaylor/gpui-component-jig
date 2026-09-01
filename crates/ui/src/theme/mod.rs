@@ -792,10 +792,15 @@ mod base_theme_projection_tests {
             macro_rules! color {
                 ($field:ident) => {
                     assert!(
-                        (left.$field.h - right.$field.h).abs() < 1e-6
-                            && (left.$field.s - right.$field.s).abs() < 1e-6
-                            && (left.$field.l - right.$field.l).abs() < 1e-6
-                            && (left.$field.a - right.$field.a).abs() < 1e-6,
+                        (left.$field.color.hue.into_degrees()
+                            - right.$field.color.hue.into_degrees())
+                        .abs()
+                            < 1e-6
+                            && (left.$field.color.saturation - right.$field.color.saturation).abs()
+                                < 1e-6
+                            && (left.$field.color.lightness - right.$field.color.lightness).abs()
+                                < 1e-6
+                            && (left.$field.alpha - right.$field.alpha).abs() < 1e-6,
                         "{} differs: {:?} != {:?}",
                         stringify!($field),
                         left.$field,

@@ -1,3 +1,4 @@
+use ::palette::IntoColor as _;
 use gpui_base::{TextView, TextViewStyle};
 
 use super::*;
@@ -8,13 +9,13 @@ pub const MARKDOWN: &str = include_str!("../../../../story/examples/fixtures/tes
 fn text_view_style(palette: ExamplePalette) -> TextViewStyle {
     let is_dark = palette.canvas == ExamplePalette::for_dark(true).canvas;
     TextViewStyle::default()
-        .with_foreground(gpui::rgb(palette.foreground).into())
-        .with_muted_foreground(gpui::rgb(palette.muted_foreground).into())
-        .with_link(gpui::rgb(palette.resolve(0x007fff)).into())
-        .with_code_background(gpui::rgb(palette.elevated).into())
-        .with_border(gpui::rgb(palette.border).into())
+        .with_foreground(gpui::rgb(palette.foreground).into_color())
+        .with_muted_foreground(gpui::rgb(palette.muted_foreground).into_color())
+        .with_link(gpui::rgb(palette.resolve(0x007fff)).into_color())
+        .with_code_background(gpui::rgb(palette.elevated).into_color())
+        .with_border(gpui::rgb(palette.border).into_color())
         .with_inline_code(gpui::HighlightStyle {
-            background_color: Some(gpui::rgb(palette.elevated).into()),
+            background_color: Some(gpui::rgb(palette.elevated).into_color()),
             ..Default::default()
         })
         .with_dark(is_dark)
@@ -66,10 +67,10 @@ mod tests {
     fn text_view_style_uses_dark_palette_colors() {
         let style = text_view_style(ExamplePalette::for_dark(true));
 
-        assert_eq!(style.foreground(), gpui::rgb(0xffffff).into());
-        assert_eq!(style.muted_foreground(), gpui::rgb(0xa3a3a3).into());
-        assert_eq!(style.code_background(), gpui::rgb(0x262626).into());
-        assert_eq!(style.border(), gpui::rgb(0x404040).into());
+        assert_eq!(style.foreground(), gpui::rgb(0xffffff).into_color());
+        assert_eq!(style.muted_foreground(), gpui::rgb(0xa3a3a3).into_color());
+        assert_eq!(style.code_background(), gpui::rgb(0x262626).into_color());
+        assert_eq!(style.border(), gpui::rgb(0x404040).into_color());
         assert_eq!(style.selection(), TextViewStyle::default().selection());
         assert!(style.is_dark());
     }

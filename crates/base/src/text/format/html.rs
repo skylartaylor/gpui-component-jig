@@ -127,14 +127,27 @@ fn mark_color(attrs: &RefCell<Vec<html5ever::Attribute>>) -> Option<Hsla> {
 }
 
 fn parse_mark_color(value: &str) -> Option<Hsla> {
-    if value.starts_with('#') {
-        return gpui::Rgba::try_from(value).ok().map(Into::into);
+    if let Some(hex) = value.strip_prefix('#') {
+        let rgba_value = match hex.len() {
+            3 => {
+                let mut chars = hex.chars();
+                let expand = |character: char| character.to_digit(16).map(|digit| digit * 17);
+                let red = expand(chars.next()?)?;
+                let green = expand(chars.next()?)?;
+                let blue = expand(chars.next()?)?;
+                (red << 24) | (green << 16) | (blue << 8) | 0xff
+            }
+            6 => (u32::from_str_radix(hex, 16).ok()? << 8) | 0xff,
+            8 => u32::from_str_radix(hex, 16).ok()?,
+            _ => return None,
+        };
+        return Some(gpui::rgb_to_hsla(gpui::rgba(rgba_value)));
     }
     match value.to_ascii_lowercase().as_str() {
-        "black" => Some(gpui::rgb(0x000000).into()),
-        "white" => Some(gpui::rgb(0xffffff).into()),
-        "blue" => Some(gpui::rgb(0x3b82f6).into()),
-        "yellow" => Some(gpui::rgb(0xfacc15).into()),
+        "black" => Some(gpui::rgb_to_hsla(gpui::rgb(0x000000))),
+        "white" => Some(gpui::rgb_to_hsla(gpui::rgb(0xffffff))),
+        "blue" => Some(gpui::rgb_to_hsla(gpui::rgb(0x3b82f6))),
+        "yellow" => Some(gpui::rgb_to_hsla(gpui::rgb(0xfacc15))),
         _ => None,
     }
 }
@@ -361,7 +374,8 @@ fn parse_paragraph(paragraph: &mut Paragraph, node: &Rc<Node>) {
                 merge_children_with_mark(node, paragraph, Some(TextMark::default().code()));
             }
             local_name!("mark") => {
-                let color = mark_color(&attrs).unwrap_or_else(|| gpui::rgb(0xfef08a).into());
+                let color =
+                    mark_color(&attrs).unwrap_or_else(|| gpui::rgb_to_hsla(gpui::rgb(0xfef08a)));
                 merge_children_with_mark(
                     node,
                     paragraph,
