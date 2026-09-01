@@ -36,10 +36,17 @@ jobs:
       - name: Patch GPUI-CE crates to the exact candidate
         shell: bash
         run: |
-          runtime_path="$PWD/.gpui-runtime"
+          runtime_path="$RUNNER_TEMP/gpui-runtime-candidate"
           if command -v cygpath >/dev/null; then
-            runtime_path="$(cygpath -m "$runtime_path")"
+            runtime_shell_path="$(cygpath -u "$runtime_path")"
+          else
+            runtime_shell_path="$runtime_path"
           fi
+          mv "$PWD/.gpui-runtime" "$runtime_shell_path"
+          if command -v cygpath >/dev/null; then
+            runtime_path="$(cygpath -m "$runtime_shell_path")"
+          fi
+          echo "GPUI_RUNTIME_PATH=$runtime_path" >> "$GITHUB_ENV"
           cargo_config_home="${CARGO_HOME:-$HOME/.cargo}"
           mkdir -p "$cargo_config_home"
           cat >> "$cargo_config_home/config.toml" <<EOF
@@ -57,7 +64,7 @@ jobs:
           python-version: "3.13"
       - name: Verify exact GPUI-CE runtime resolution
         shell: bash
-        run: cargo metadata --format-version 1 | python script/verify-gpui-runtime.py .gpui-runtime
+        run: cargo metadata --format-version 1 | python script/verify-gpui-runtime.py "$GPUI_RUNTIME_PATH"
       - name: Install system dependencies
         if: ${{ matrix.run_on != 'windows-latest' }}
         run: script/bootstrap
@@ -126,10 +133,17 @@ jobs:
       - name: Patch GPUI-CE crates to the exact candidate
         shell: bash
         run: |
-          runtime_path="$PWD/.gpui-runtime"
+          runtime_path="$RUNNER_TEMP/gpui-runtime-candidate"
           if command -v cygpath >/dev/null; then
-            runtime_path="$(cygpath -m "$runtime_path")"
+            runtime_shell_path="$(cygpath -u "$runtime_path")"
+          else
+            runtime_shell_path="$runtime_path"
           fi
+          mv "$PWD/.gpui-runtime" "$runtime_shell_path"
+          if command -v cygpath >/dev/null; then
+            runtime_path="$(cygpath -m "$runtime_shell_path")"
+          fi
+          echo "GPUI_RUNTIME_PATH=$runtime_path" >> "$GITHUB_ENV"
           cargo_config_home="${CARGO_HOME:-$HOME/.cargo}"
           mkdir -p "$cargo_config_home"
           cat >> "$cargo_config_home/config.toml" <<EOF
@@ -146,7 +160,7 @@ jobs:
         with:
           python-version: "3.13"
       - name: Verify exact GPUI-CE runtime resolution
-        run: cargo metadata --format-version 1 | python script/verify-gpui-runtime.py .gpui-runtime
+        run: cargo metadata --format-version 1 | python script/verify-gpui-runtime.py "$GPUI_RUNTIME_PATH"
       - name: Install system dependencies
         run: script/bootstrap
       - name: Setup | Cache Cargo
@@ -186,10 +200,17 @@ jobs:
       - name: Patch GPUI-CE crates to the exact candidate
         shell: bash
         run: |
-          runtime_path="$PWD/.gpui-runtime"
+          runtime_path="$RUNNER_TEMP/gpui-runtime-candidate"
           if command -v cygpath >/dev/null; then
-            runtime_path="$(cygpath -m "$runtime_path")"
+            runtime_shell_path="$(cygpath -u "$runtime_path")"
+          else
+            runtime_shell_path="$runtime_path"
           fi
+          mv "$PWD/.gpui-runtime" "$runtime_shell_path"
+          if command -v cygpath >/dev/null; then
+            runtime_path="$(cygpath -m "$runtime_shell_path")"
+          fi
+          echo "GPUI_RUNTIME_PATH=$runtime_path" >> "$GITHUB_ENV"
           cargo_config_home="${CARGO_HOME:-$HOME/.cargo}"
           mkdir -p "$cargo_config_home"
           cat >> "$cargo_config_home/config.toml" <<EOF
@@ -206,7 +227,7 @@ jobs:
         with:
           python-version: "3.13"
       - name: Verify exact GPUI-CE runtime resolution
-        run: cargo metadata --format-version 1 | python script/verify-gpui-runtime.py .gpui-runtime
+        run: cargo metadata --format-version 1 | python script/verify-gpui-runtime.py "$GPUI_RUNTIME_PATH"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -256,10 +277,17 @@ jobs:
       - name: Patch GPUI-CE crates to the exact candidate
         shell: bash
         run: |
-          runtime_path="$PWD/.gpui-runtime"
+          runtime_path="$RUNNER_TEMP/gpui-runtime-candidate"
           if command -v cygpath >/dev/null; then
-            runtime_path="$(cygpath -m "$runtime_path")"
+            runtime_shell_path="$(cygpath -u "$runtime_path")"
+          else
+            runtime_shell_path="$runtime_path"
           fi
+          mv "$PWD/.gpui-runtime" "$runtime_shell_path"
+          if command -v cygpath >/dev/null; then
+            runtime_path="$(cygpath -m "$runtime_shell_path")"
+          fi
+          echo "GPUI_RUNTIME_PATH=$runtime_path" >> "$GITHUB_ENV"
           cargo_config_home="${CARGO_HOME:-$HOME/.cargo}"
           mkdir -p "$cargo_config_home"
           cat >> "$cargo_config_home/config.toml" <<EOF
@@ -275,7 +303,7 @@ jobs:
           python-version: "3.13"
       - name: Verify exact GPUI-CE runtime resolution
         shell: bash
-        run: cargo metadata --format-version 1 | python script/verify-gpui-runtime.py .gpui-runtime
+        run: cargo metadata --format-version 1 | python script/verify-gpui-runtime.py "$GPUI_RUNTIME_PATH"
       - name: Install system dependencies
         if: ${{ matrix.run_on != 'windows-latest' }}
         run: script/bootstrap
