@@ -895,8 +895,9 @@ mod tests {
 
         let initial_updates = cx.take_a11y_tree_updates();
         let initial_node = initial_updates
-            .last()
-            .and_then(|update| {
+            .iter()
+            .rev()
+            .find_map(|update| {
                 update
                     .nodes
                     .iter()
@@ -918,8 +919,9 @@ mod tests {
 
         let invalid_updates = cx.take_a11y_tree_updates();
         let invalid_node = invalid_updates
-            .last()
-            .and_then(|update| {
+            .iter()
+            .rev()
+            .find_map(|update| {
                 update
                     .nodes
                     .iter()
@@ -941,8 +943,9 @@ mod tests {
 
         let valid_updates = cx.take_a11y_tree_updates();
         let valid_node = valid_updates
-            .last()
-            .and_then(|update| {
+            .iter()
+            .rev()
+            .find_map(|update| {
                 update
                     .nodes
                     .iter()

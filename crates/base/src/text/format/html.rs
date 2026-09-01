@@ -137,6 +137,15 @@ fn parse_mark_color(value: &str) -> Option<Hsla> {
                 let blue = expand(chars.next()?)?;
                 (red << 24) | (green << 16) | (blue << 8) | 0xff
             }
+            4 => {
+                let mut chars = hex.chars();
+                let expand = |character: char| character.to_digit(16).map(|digit| digit * 17);
+                let red = expand(chars.next()?)?;
+                let green = expand(chars.next()?)?;
+                let blue = expand(chars.next()?)?;
+                let alpha = expand(chars.next()?)?;
+                (red << 24) | (green << 16) | (blue << 8) | alpha
+            }
             6 => (u32::from_str_radix(hex, 16).ok()? << 8) | 0xff,
             8 => u32::from_str_radix(hex, 16).ok()?,
             _ => return None,
@@ -692,7 +701,23 @@ mod tests {
         node::{BlockNode, ImageNode, InlineNode, NodeContext, Paragraph},
     };
 
-    use super::trim_text;
+    use super::{parse_mark_color, trim_text};
+
+    #[test]
+    fn mark_colors_parse_every_css_hex_width() {
+        for (value, rgba) in [
+            ("#f0a", 0xff00aaff),
+            ("#f0a8", 0xff00aa88),
+            ("#336699", 0x336699ff),
+            ("#33669980", 0x33669980),
+        ] {
+            assert_eq!(
+                parse_mark_color(value),
+                Some(gpui::rgb_to_hsla(gpui::rgba(rgba))),
+                "failed to preserve {value}"
+            );
+        }
+    }
 
     #[test]
     fn test_cleanup_html() {

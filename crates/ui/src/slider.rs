@@ -65,7 +65,7 @@ impl ThumbRing {
             width: THUMB_RING_WIDTH * progress,
             color: {
                 let mut color = color;
-                color.alpha *= THUMB_RING_OPACITY * progress;
+                color.alpha = THUMB_RING_OPACITY * progress;
                 color
             },
         }

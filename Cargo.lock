@@ -3223,6 +3223,7 @@ dependencies = [
  "objc2-app-kit 0.3.2",
  "objc2-foundation 0.3.2",
  "once_cell",
+ "palette",
  "paste",
  "raw-window-handle",
  "resvg 0.45.1",
@@ -3272,6 +3273,7 @@ dependencies = [
  "tree-sitter-yaml",
  "tree-sitter-zig",
  "uuid",
+ "web-time",
  "windows 0.58.0",
  "zed-sum-tree",
 ]
@@ -3303,13 +3305,13 @@ dependencies = [
  "gpui_ce_platform",
  "html5ever 0.27.0",
  "indoc",
- "instant",
  "lsp-types 0.97.0",
  "markdown",
  "markup5ever_rcdom",
  "objc2 0.6.4",
  "objc2-app-kit 0.3.2",
  "objc2-foundation 0.3.2",
+ "palette",
  "raw-window-handle",
  "regex",
  "ropey",
@@ -3322,7 +3324,6 @@ dependencies = [
  "tracing",
  "unicode-segmentation",
  "web-time",
- "zed-reqwest",
  "zed-sum-tree",
 ]
 

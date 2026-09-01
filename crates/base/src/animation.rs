@@ -122,8 +122,13 @@ impl Lerp for Hsla {
     /// irrelevant.
     fn lerp(&self, target: &Self, t: f32) -> Self {
         hsla(
-            (self.color.hue.into_degrees() / 360.)
-                .lerp(&(target.color.hue.into_degrees() / 360.), t),
+            (self
+                .color
+                .hue
+                .into_degrees()
+                .lerp(&target.color.hue.into_degrees(), t)
+                .rem_euclid(360.))
+                / 360.,
             self.color.saturation.lerp(&target.color.saturation, t),
             self.color.lightness.lerp(&target.color.lightness, t),
             self.alpha.lerp(&target.alpha, t),

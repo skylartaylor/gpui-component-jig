@@ -728,6 +728,7 @@ fn clip_stops_to_bar(stops: [LinearColorStop; 2]) -> [LinearColorStop; 2] {
         gpui::hsla(
             (a_color.color.hue.into_degrees()
                 + (b_color.color.hue.into_degrees() - a_color.color.hue.into_degrees()) * t)
+                .rem_euclid(360.)
                 / 360.,
             a_color.color.saturation + (b_color.color.saturation - a_color.color.saturation) * t,
             a_color.color.lightness + (b_color.color.lightness - a_color.color.lightness) * t,

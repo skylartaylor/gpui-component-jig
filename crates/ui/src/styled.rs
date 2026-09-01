@@ -37,7 +37,7 @@ pub(crate) fn popover_ring(cx: &App) -> Hsla {
 
 fn with_alpha(color: Hsla, alpha: f32) -> Hsla {
     hsla(
-        color.color.hue.into_degrees() / 360.,
+        color.color.hue.into_positive_degrees() / 360.,
         color.color.saturation,
         color.color.lightness,
         alpha.clamp(0., 1.),

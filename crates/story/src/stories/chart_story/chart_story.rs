@@ -689,6 +689,7 @@ impl Render for ChartStory {
                                                 + (c2.color.hue.into_degrees()
                                                     - c1.color.hue.into_degrees())
                                                     * t)
+                                                .rem_euclid(360.)
                                                 / 360.,
                                             c1.color.saturation
                                                 + (c2.color.saturation - c1.color.saturation) * t,

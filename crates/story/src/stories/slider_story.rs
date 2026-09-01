@@ -325,7 +325,7 @@ impl Render for SliderStory {
                             )
                             .child(v_flex().items_center().child("Hue").child(format!(
                                 "{:.0}",
-                                self.slider_hsl_value.color.hue.into_degrees()
+                                self.slider_hsl_value.color.hue.into_positive_degrees()
                             ))),
                     )
                     .child(

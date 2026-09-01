@@ -1301,8 +1301,9 @@ mod tests {
 
         let updates = cx.take_a11y_tree_updates();
         let button = updates
-            .last()
-            .and_then(|update| {
+            .iter()
+            .rev()
+            .find_map(|update| {
                 update
                     .nodes
                     .iter()
