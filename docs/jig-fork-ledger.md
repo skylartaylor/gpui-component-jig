@@ -230,9 +230,11 @@ Component Shell, Shell Core, and the Standard Runtime matrix on all three
 platforms. The bounds ambiguity was resolved, while the Test matrix showed the
 nested test module needed Palette's conversion trait rather than GPUI's color
 extension. `0be723fa` imports `palette::IntoColor` in that exact scope. Its
-exact-head hosted rerun and Jig application-level verification remain pending.
-The evidence refs are published; the runtime and component adoption tags remain
-pending.
+pre-push metadata check also found the earlier WASM palette manifest addition
+missing from that package's lockfile dependency list; `398658ad` synchronizes
+the one required entry. The exact-head hosted rerun and Jig application-level
+verification remain pending. The evidence refs are published; the runtime and
+component adoption tags remain pending.
 
 ## Bounded external review record
 
