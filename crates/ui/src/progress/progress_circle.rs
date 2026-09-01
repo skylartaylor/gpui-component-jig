@@ -1,17 +1,15 @@
 use crate::{ActiveTheme, Sizable, Size, StyledExt};
 use gpui::Bounds;
-use gpui::ColorExt as _;
 use gpui::prelude::FluentBuilder as _;
 use gpui::{
     Animation, AnimationExt as _, AnyElement, App, ElementId, Hsla, IntoElement, ParentElement,
     Pixels, RenderOnce, SharedString, StyleRefinement, Styled, Window, canvas, ease_in_out, px,
     relative,
 };
-use gpui_base::Progress as BaseProgress;
-use web_time::Duration;
+use gpui_base::{Progress as BaseProgress, Transition, transition};
+use instant::Duration;
 use std::f32::consts::TAU;
 
-use super::ProgressState;
 use crate::plot::shape::{Arc, ArcData};
 
 /// A circular progress indicator element.
@@ -166,9 +164,14 @@ impl RenderOnce for ProgressCircle {
         let value = self.value;
         let loading = self.loading;
         let accessibility_label = self.accessibility_label;
-        let state = window.use_keyed_state(self.id.clone(), cx, |_, _| ProgressState::new(value));
-        let prev_target = state.read(cx).target();
-        let has_changed = prev_target != value;
+        let animated_value = transition(
+            (self.id.clone(), "value"),
+            value,
+            Transition::new(cx.theme().motion_tokens().duration_normal)
+                .easing(cx.theme().motion_tokens().easing_move.clone()),
+            window,
+            cx,
+        );
 
         let color = self.color.unwrap_or(cx.theme().progress_bar);
 
@@ -192,32 +195,7 @@ impl RenderOnce for ProgressCircle {
             .refine_style(&self.style)
             .children(self.children)
             .map(|this| {
-                if has_changed {
-                    let from = prev_target;
-                    state.read(cx).set_target(value);
-
-                    let duration = Duration::from_secs_f64(0.15);
-                    cx.spawn({
-                        let state = state.clone();
-                        async move |cx| {
-                            cx.background_executor().timer(duration).await;
-                            _ = state.update(cx, |this, _| {
-                                this.value = this.target();
-                            });
-                        }
-                    })
-                    .detach();
-
-                    this.with_animation(
-                        format!("progress-circle-{}", from),
-                        Animation::new(duration),
-                        move |this, delta| {
-                            let v = from + (value - from) * delta;
-                            this.child(Self::render_circle(0., v, color))
-                        },
-                    )
-                    .into_any_element()
-                } else if loading {
+                if loading {
                     this.with_animation(
                         "progress-circle-loading",
                         Animation::new(Duration::from_secs(1)).repeat(),
@@ -229,7 +207,7 @@ impl RenderOnce for ProgressCircle {
                     )
                     .into_any_element()
                 } else {
-                    this.child(Self::render_circle(0., value, color))
+                    this.child(Self::render_circle(0., animated_value, color))
                         .into_any_element()
                 }
             })

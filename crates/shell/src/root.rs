@@ -531,6 +531,7 @@ impl ShellRoot {
             .map(|(index, dialog)| {
                 let topmost = index == topmost_index;
                 let root = root.clone();
+                rebuild_script_overlay(&dialog.content, cx);
 
                 Dialog::new(cx)
                     .focus_handle(dialog.focus_handle.clone())
@@ -582,6 +583,7 @@ impl ShellRoot {
         let sheet = self.sheet.as_ref()?;
         let root = cx.entity();
         let placement = sheet.placement;
+        rebuild_script_overlay(&sheet.content, cx);
 
         Some(
             Sheet::new(cx)
@@ -734,6 +736,20 @@ impl Render for ShellRoot {
 
         div()
             .id("shell-root")
+            // The window's base text size, from the theme rather than from
+            // GPUI's default rem.
+            //
+            // Everything this root draws itself -- toasts, the sheet, the
+            // dialog scrim's chrome -- states no size of its own and inherits
+            // this one. Without it that chrome sat at GPUI's 16px default
+            // while the components an application builds set their own sizes,
+            // so a dense application drawn at 12px got 16px notifications over
+            // it. `md` is the base by the library's own convention: it is what
+            // `gpui_component::Theme` already takes its `font_size` from.
+            //
+            // The default `md` is that same 16px, so a theme that says nothing
+            // about type is drawn exactly as it was before this existed.
+            .text_size(tokens.typography.md.size)
             .key_context(CONTEXT)
             .on_action(cx.listener(Self::on_action_tab))
             .on_action(cx.listener(Self::on_action_tab_prev))
@@ -1002,6 +1018,29 @@ fn install_key_bindings(cx: &mut App) {
 /// test — there is nothing to check. A `Render` or `Layout` scope is a script
 /// bug: it is reported and ignored rather than panicked on, because a script
 /// error must not take the window down (`docs/gpui-shell.md` §5.8).
+/// Rebuilds a script overlay's description before it draws.
+///
+/// An overlay's content is a function, and what it closes over is somebody
+/// else's state -- that is the contract `open_dialog` and `open_sheet`
+/// document, and the only one they can have: neither answers a view handle, so
+/// there is nothing for a script to notify when the state behind the closure
+/// moves. Without this, an overlay materializes the description it was built
+/// with, once, for as long as it is open: a dialog that looks up what someone
+/// typed shows the answer to nothing.
+///
+/// So the root rebuilds it whenever the root itself draws, which is what
+/// `window.refresh()` -- the call whose whole purpose is "there is no view to
+/// notify" -- now reaches. Marking it dirty schedules no frame of its own: the
+/// overlay is about to render as part of this one, and it renders from the
+/// script rather than from the cache.
+///
+/// A non-script overlay owns its own state and is left alone.
+fn rebuild_script_overlay(content: &AnyView, cx: &mut App) {
+    if let Ok(view) = content.clone().downcast::<ScriptView>() {
+        view.update(cx, |view, _| view.invalidate());
+    }
+}
+
 fn overlay_mutation_allowed(operation: &str) -> bool {
     match scope::current_phase() {
         None => true,
