@@ -224,9 +224,15 @@ platforms. The full Test matrix then exposed only two deeper showcase-test
 compatibility issues: missing GPUI color conversion scope and an ambiguous
 test-only prepaint bounds hook. `eeb0088f` restores the color trait and
 explicitly selects the component extension while preserving the stored footer
-bounds. Its exact-head hosted rerun and Jig application-level verification
-remain pending. The evidence refs are published; the runtime and component
-adoption tags remain pending.
+bounds. Its exact-head hosted rerun (`33564471397` at
+`2b4d08458c1ed150213d3405dc6d452d7e6fb354`) passed documentation,
+Component Shell, Shell Core, and the Standard Runtime matrix on all three
+platforms. The bounds ambiguity was resolved, while the Test matrix showed the
+nested test module needed Palette's conversion trait rather than GPUI's color
+extension. `0be723fa` imports `palette::IntoColor` in that exact scope. Its
+exact-head hosted rerun and Jig application-level verification remain pending.
+The evidence refs are published; the runtime and component adoption tags remain
+pending.
 
 ## Bounded external review record
 
