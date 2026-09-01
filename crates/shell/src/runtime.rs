@@ -15,10 +15,11 @@ use std::{
 
 use anyhow::{Result, anyhow};
 use gpui::{
-    AnyElement, App, BorderStyle, Bounds, ClipboardItem, Corners, Edges, Element, ElementId,
-    Entity, GlobalElementId, Hitbox, Hsla, InspectorElementId, InteractiveElement, IntoElement,
-    LayoutId, PaintQuad, ParentElement, Pixels, Point, SharedString, StatefulInteractiveElement,
-    Styled, StyledText, WeakEntity, Window, div, px, relative, rems, transparent_black,
+    AnyElement, App, BorderStyle, Bounds, ClipboardItem, ColorExt as _, Corners, Edges, Element,
+    ElementId, Entity, GlobalElementId, Hitbox, Hsla, InspectorElementId, InteractiveElement,
+    IntoElement, LayoutId, PaintQuad, ParentElement, Pixels, Point, SharedString,
+    StatefulInteractiveElement, Styled, StyledText, WeakEntity, Window, div, px, relative, rems,
+    transparent_black,
 };
 use gpui_base::{
     Button, ColorTokens, TextSelectionHandle, TextSelectionRegistration, TextSelectionRun,
