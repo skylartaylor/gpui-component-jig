@@ -125,8 +125,8 @@ impl Lerp for Hsla {
             (self
                 .color
                 .hue
-                .into_degrees()
-                .lerp(&target.color.hue.into_degrees(), t)
+                .into_positive_degrees()
+                .lerp(&target.color.hue.into_positive_degrees(), t)
                 .rem_euclid(360.))
                 / 360.,
             self.color.saturation.lerp(&target.color.saturation, t),
@@ -263,7 +263,18 @@ pub type Transition = EffectTransition;
 
 #[cfg(test)]
 mod tests {
-    use super::cubic_bezier;
+    use gpui::hsla;
+
+    use super::{Lerp as _, cubic_bezier};
+
+    #[test]
+    fn hsla_lerp_preserves_positive_hues_across_180_degrees() {
+        let start = hsla(100. / 360., 1., 0.5, 1.);
+        let end = hsla(260. / 360., 1., 0.5, 1.);
+        let midpoint = start.lerp(&end, 0.5);
+
+        assert!((midpoint.color.hue.into_positive_degrees() - 180.).abs() < 1e-4);
+    }
 
     #[test]
     fn cubic_bezier_matches_engine_published_values() {

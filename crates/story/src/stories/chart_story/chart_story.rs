@@ -685,9 +685,9 @@ impl Render for ChartStory {
                                     let hi = project(bar.origin.x + bar.size.width, bar.origin.y);
                                     let lerp = |t: f32| {
                                         gpui::hsla(
-                                            (c1.color.hue.into_degrees()
-                                                + (c2.color.hue.into_degrees()
-                                                    - c1.color.hue.into_degrees())
+                                            (c1.color.hue.into_positive_degrees()
+                                                + (c2.color.hue.into_positive_degrees()
+                                                    - c1.color.hue.into_positive_degrees())
                                                     * t)
                                                 .rem_euclid(360.)
                                                 / 360.,
