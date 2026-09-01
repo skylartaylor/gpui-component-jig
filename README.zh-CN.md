@@ -2,7 +2,7 @@
 
 [English](./README.md) | [简体中文](./README.zh-CN.md)
 
-[![Build Status](https://github.com/gpui-ce/gpui-component/actions/workflows/ci.yml/badge.svg)](https://github.com/gpui-ce/gpui-component/actions/workflows/ci.yml)
+[![Build Status](https://github.com/skylartaylor/gpui-component-jig/actions/workflows/ci.yml/badge.svg)](https://github.com/skylartaylor/gpui-component-jig/actions/workflows/ci.yml)
 
 使用 Rust 和 [GPUI](https://gpui.rs) 构建出色、高性能的桌面应用。
 
@@ -82,11 +82,22 @@ GPUI Component 从第一天起就用于构建 [Longbridge Pro](https://longbridg
 
 ## Usage
 
+此兼容性分支通过公开且不可变的 Git 引用分发，而不通过 crates.io。
+组件分支与配套 GPUI-CE 运行时必须固定到
+[`docs/jig-fork-ledger.md`](docs/jig-fork-ledger.md) 中记录的精确提交。
+在正式采用标签发布之前，候选分支仅用于审查，不是受支持的依赖项。
+
 ```toml
-gpui = { package = "gpui_ce", version = "0.2.2" }
-gpui_platform = { package = "gpui_ce_platform", version = "0.1.0", features = ["font-kit"] }
-gpui-component = { package = "gpui_ce_components", version = "0.2.0" }
+gpui-component = { package = "gpui_ce_components", git = "https://github.com/skylartaylor/gpui-component-jig", rev = "<component-commit>" }
+
+[patch.crates-io]
+gpui-ce = { git = "https://github.com/skylartaylor/gpui-ce-jig", rev = "<paired-runtime-commit>" }
+gpui_ce_platform = { git = "https://github.com/skylartaylor/gpui-ce-jig", rev = "<paired-runtime-commit>" }
+gpui_ce_web = { git = "https://github.com/skylartaylor/gpui-ce-jig", rev = "<paired-runtime-commit>" }
+gpui_ce_macros = { git = "https://github.com/skylartaylor/gpui-ce-jig", rev = "<paired-runtime-commit>" }
 ```
+
+在另行审查并确定完整、可发布的依赖图及版本策略之前，注册表发布保持禁用。
 
 ### 基础示例
 

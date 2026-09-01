@@ -6,7 +6,7 @@
 
 [English](./README.md) | [简体中文](./README.zh-CN.md)
 
-[![Build Status](https://github.com/gpui-ce/gpui-component/actions/workflows/ci.yml/badge.svg)](https://github.com/gpui-ce/gpui-component/actions/workflows/ci.yml)
+[![Build Status](https://github.com/skylartaylor/gpui-component-jig/actions/workflows/ci.yml/badge.svg)](https://github.com/skylartaylor/gpui-component-jig/actions/workflows/ci.yml)
 
 Build fantastic, high-performance desktop apps with Rust and [GPUI](https://gpui.rs).
 
@@ -94,11 +94,25 @@ commercial desktop application rather than designed in isolation.
 
 ## Usage
 
+This compatibility fork is distributed through advertised immutable Git refs,
+not crates.io. Pin the component fork and its paired GPUI-CE runtime to the
+exact commits recorded in [`docs/jig-fork-ledger.md`](docs/jig-fork-ledger.md).
+Until an adoption tag is published, candidate branches are review inputs rather
+than supported consumer dependencies.
+
 ```toml
-gpui = { package = "gpui_ce", version = "0.2.2" }
-gpui_platform = { package = "gpui_ce_platform", version = "0.1.0", features = ["font-kit"] }
-gpui-component = { package = "gpui_ce_components", version = "0.2.0" }
+gpui-component = { package = "gpui_ce_components", git = "https://github.com/skylartaylor/gpui-component-jig", rev = "<component-commit>" }
+
+[patch.crates-io]
+gpui-ce = { git = "https://github.com/skylartaylor/gpui-ce-jig", rev = "<paired-runtime-commit>" }
+gpui_ce_platform = { git = "https://github.com/skylartaylor/gpui-ce-jig", rev = "<paired-runtime-commit>" }
+gpui_ce_web = { git = "https://github.com/skylartaylor/gpui-ce-jig", rev = "<paired-runtime-commit>" }
+gpui_ce_macros = { git = "https://github.com/skylartaylor/gpui-ce-jig", rev = "<paired-runtime-commit>" }
 ```
+
+Registry publication remains intentionally disabled until the workspace has a
+separately reviewed packaging and versioning policy with a closed publishable
+dependency graph.
 
 ### Basic Example
 
