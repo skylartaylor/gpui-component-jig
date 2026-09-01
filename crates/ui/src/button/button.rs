@@ -312,11 +312,8 @@ impl Button {
     }
 
     /// Set the developer-assigned identifier exposed to accessibility clients.
-    pub fn accessibility_id(self, id: impl Into<SharedString>) -> Self {
-        // GPUI-CE no longer exposes an accessibility-id setter on elements.
-        // Keep this builder source-compatible while retaining the visible and
-        // announced label configured by the other accessibility builders.
-        let _ = id.into();
+    pub fn accessibility_id(mut self, id: impl Into<SharedString>) -> Self {
+        self.base = self.base.accessibility_id(id);
         self
     }
 
@@ -1282,6 +1279,38 @@ mod tests {
             Some("Save"),
             "and must not change what is drawn"
         );
+    }
+
+    #[gpui::test]
+    fn accessibility_id_reaches_the_emitted_button_node(cx: &mut gpui::TestAppContext) {
+        use gpui::{Context, Render};
+
+        struct Harness;
+
+        impl Render for Harness {
+            fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+                Button::new("save")
+                    .label("Save")
+                    .accessibility_id("toolbar.save")
+            }
+        }
+
+        cx.update(crate::init);
+        let (_, cx) = cx.add_window_view(|_, _| Harness);
+        assert!(cx.activate_a11y().is_some());
+
+        let updates = cx.take_a11y_tree_updates();
+        let button = updates
+            .last()
+            .and_then(|update| {
+                update
+                    .nodes
+                    .iter()
+                    .find(|(_, node)| node.author_id() == Some("toolbar.save"))
+                    .map(|(_, node)| node)
+            })
+            .expect("identified button missing from accessibility update");
+        assert_eq!(button.role(), Role::Button);
     }
 
     #[gpui::test]

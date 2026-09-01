@@ -126,6 +126,8 @@ pub struct Input {
     role: RoleOverride,
     accessibility_id: Option<SharedString>,
     aria_label: Option<SharedString>,
+    aria_description: Option<SharedString>,
+    aria_invalid: bool,
 
     /// An optional context menu builder to allow a custom context menu on the input.
     ///
@@ -197,11 +199,13 @@ impl Input {
             role: RoleOverride::default(),
             accessibility_id: None,
             aria_label: None,
+            aria_description: None,
+            aria_invalid: false,
             context_menu_builder: None,
         }
     }
 
-    /// Retain the legacy accessibility-id builder for source compatibility.
+    /// Set the developer-assigned identifier exposed to accessibility clients.
     pub fn accessibility_id(mut self, id: impl Into<SharedString>) -> Self {
         self.accessibility_id = Some(id.into());
         self
@@ -209,6 +213,18 @@ impl Input {
 
     pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
         self.aria_label = Some(label.into());
+        self
+    }
+
+    /// Set supplementary descriptive text for accessibility clients.
+    pub fn aria_description(mut self, description: impl Into<SharedString>) -> Self {
+        self.aria_description = Some(description.into());
+        self
+    }
+
+    /// Report whether the current value fails validation.
+    pub fn aria_invalid(mut self, invalid: bool) -> Self {
+        self.aria_invalid = invalid;
         self
     }
 
@@ -551,7 +567,12 @@ impl RenderOnce for Input {
                 })
             })
             .role(accessibility_role)
+            .when_some(self.accessibility_id, |this, id| this.accessibility_id(id))
             .when_some(aria_label, |this, label| this.aria_label(label))
+            .when_some(self.aria_description, |this, description| {
+                this.aria_description(description)
+            })
+            .when(self.aria_invalid, |this| this.aria_invalid(true))
             .when_some(placeholder, |this, placeholder| {
                 this.aria_placeholder(placeholder)
             })
@@ -838,16 +859,14 @@ mod tests {
     }
 
     #[gpui::test]
-    fn input_accessibility_id_remains_source_compatible(cx: &mut gpui::TestAppContext) {
-        use crate::ElementExt as _;
-        use gpui::{AppContext as _, Element as _, IntoElement as _, Render};
-        use std::sync::{Arc, Mutex};
-
-        type EmittedIds = Vec<Option<String>>;
+    fn input_accessibility_metadata_reaches_tree_updates(cx: &mut gpui::TestAppContext) {
+        use gpui::{AppContext as _, Render};
 
         struct InputA11yProbe {
             state: Entity<InputState>,
-            emitted: Arc<Mutex<EmittedIds>>,
+            id: Option<SharedString>,
+            description: Option<SharedString>,
+            invalid: bool,
         }
 
         impl Render for InputA11yProbe {
@@ -856,41 +875,82 @@ mod tests {
                 _window: &mut Window,
                 _cx: &mut gpui::Context<Self>,
             ) -> impl IntoElement {
-                let state = self.state.clone();
-                let emitted = self.emitted.clone();
-                div().on_prepaint(move |_, window, cx| {
-                    let mut author_id_of = |input: Input| {
-                        let mut node = gpui::accesskit::Node::new(Role::TextInput);
-                        input
-                            .render(window, cx)
-                            .into_element()
-                            .write_a11y_info(&mut node);
-                        node.author_id().map(ToOwned::to_owned)
-                    };
-
-                    *emitted.lock().unwrap() = vec![
-                        author_id_of(Input::new(&state)),
-                        author_id_of(Input::new(&state).accessibility_id("search.query")),
-                    ];
-                })
+                Input::new(&self.state)
+                    .when_some(self.id.clone(), |input, id| input.accessibility_id(id))
+                    .when_some(self.description.clone(), |input, description| {
+                        input.aria_description(description)
+                    })
+                    .aria_invalid(self.invalid)
             }
         }
 
         cx.update(crate::init);
-        let emitted = Arc::new(Mutex::new(Vec::new()));
-        let captured = emitted.clone();
-        let (_, cx) = cx.add_window_view(move |window, cx| InputA11yProbe {
+        let (probe, cx) = cx.add_window_view(move |window, cx| InputA11yProbe {
             state: cx.new(|cx| InputState::new(window, cx)),
-            emitted,
+            id: None,
+            description: None,
+            invalid: false,
         });
-        cx.update(|window, cx| {
-            let _ = window.draw(cx);
-        });
+        assert!(cx.activate_a11y().is_some());
 
+        let initial_updates = cx.take_a11y_tree_updates();
+        let initial_node = initial_updates
+            .last()
+            .and_then(|update| {
+                update
+                    .nodes
+                    .iter()
+                    .find(|(_, node)| node.role() == Role::TextInput)
+                    .map(|(_, node)| node)
+            })
+            .expect("input missing from initial accessibility update");
+        assert_eq!(initial_node.author_id(), None);
+        assert_eq!(initial_node.description(), None);
+        assert_eq!(initial_node.invalid(), None);
+
+        probe.update(cx, |probe, cx| {
+            probe.id = Some("search.query".into());
+            probe.description = Some("Searches the current project".into());
+            probe.invalid = true;
+            cx.notify();
+        });
+        cx.run_until_parked();
+
+        let invalid_updates = cx.take_a11y_tree_updates();
+        let invalid_node = invalid_updates
+            .last()
+            .and_then(|update| {
+                update
+                    .nodes
+                    .iter()
+                    .find(|(_, node)| node.author_id() == Some("search.query"))
+                    .map(|(_, node)| node)
+            })
+            .expect("identified input missing from accessibility update");
         assert_eq!(
-            *captured.lock().unwrap(),
-            vec![None, None]
+            invalid_node.description(),
+            Some("Searches the current project")
         );
+        assert_eq!(invalid_node.invalid(), Some(gpui::accesskit::Invalid::True));
+
+        probe.update(cx, |probe, cx| {
+            probe.invalid = false;
+            cx.notify();
+        });
+        cx.run_until_parked();
+
+        let valid_updates = cx.take_a11y_tree_updates();
+        let valid_node = valid_updates
+            .last()
+            .and_then(|update| {
+                update
+                    .nodes
+                    .iter()
+                    .find(|(_, node)| node.author_id() == Some("search.query"))
+                    .map(|(_, node)| node)
+            })
+            .expect("identified input missing after clearing invalid state");
+        assert_eq!(valid_node.invalid(), None);
     }
 
     #[test]
