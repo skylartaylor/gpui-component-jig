@@ -34,6 +34,7 @@ lsp-types.workspace = true
 markdown = { version = "1.0.0", features = ["serde"] }
 html5ever = "0.27"
 markup5ever_rcdom = "0.3.0"
+palette.workspace = true
 ropey.workspace = true
 regex = "1"
 schemars.workspace = true
