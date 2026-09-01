@@ -49,7 +49,9 @@ The local implementation queue is:
 - `4de65547` preserves positive hue interpolation across the 180-degree seam;
 - `547c5370` documents every direct dependency in the exact Git pair; and
 - `5ab9f6e6` makes hosted CI resolve and verify the exact published runtime
-  candidate before checking the component workspace.
+  candidate before checking the component workspace; and
+- `baac0ccd` relocates the checked-out runtime outside the component workspace
+  so its inherited workspace dependencies resolve against the runtime root.
 
 | Conflicted path | Resolution |
 | --- | --- |
@@ -157,16 +159,21 @@ warning from the exact-pair checks is the existing `block 0.1.6` future
 incompatibility warning.
 
 These checks predate the bounded-review remediation commit and remain historical
-evidence rather than proof of the current candidate. The current candidate has
-implementation commit `5ab9f6e6492da5180253d6ef91eb66780b141bfb`
+evidence rather than proof of the current candidate. The current candidate
+implementation commit `baac0ccd45f4c34da2cf1a0cf26ba904d0db9cff`
 is paired with published runtime commit
 `7bcc3ebc46d88f4c4c4fc21365825fe3dff2054b`. It has passed
 `cargo fmt --all -- --check`, `git diff --check`, `actionlint` for both workflow
-files, Python syntax and success-fixture checks for the runtime-resolution
+files, an exact `cargo metadata` path-resolution check against the paired
+runtime, Python syntax and success-fixture checks for the runtime-resolution
 validator, static CI package-selector validation, and an exact remote-ref check
-for the runtime candidate. A focused base color regression run was stopped
-during dependency compilation when shared disk space fell to 11 GiB; it
-produced no test result. Full current-head workspace, all-target,
+for the runtime candidate. The first hosted run failed before compilation
+because a runtime checkout nested under the component workspace inherited the
+wrong workspace root. `baac0ccd` moves that checkout to the runner's temporary
+directory; the same outside-workspace topology passes the exact local metadata
+validator. A focused base color regression run was stopped during dependency
+compilation when shared disk space fell to 11 GiB; it produced no test result.
+Full current-head workspace, all-target,
 cross-platform, hosted CI, example/story, shell, and Jig application-level
 verification remain pending. The evidence refs are published; the runtime and
 component adoption tags remain pending.
