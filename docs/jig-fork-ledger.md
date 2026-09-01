@@ -11,7 +11,7 @@ and the runtime/component proof matrix is green at that exact pair.
 | --- | --- | --- |
 | Longbridge GPUI Component | `5cb094628d27acbd557a1c22fd830417a702f0e5` | Semantic upstream |
 | GPUI-CE component compatibility fork | `034ce6bb28fb7e820c47dd22ef9d14c5e7113dca` | Reconciliation base |
-| GPUI-CE runtime candidate | `7bcc3ebc46d88f4c4c4fc21365825fe3dff2054b` | Published as `jig/runtime-refresh-2026-09`; pending adoption tag and not adoptable |
+| GPUI-CE runtime candidate | `781c86514dff3e667b672047bb76cef440d3f22e` | Published as `jig/runtime-refresh-2026-09`; pending the synchronized security adoption tag |
 | Historical Jig component pin | `5a35fd7aeb499469c82480257d571a6c0367edb8` | Recoverable predecessor |
 | Pane isolation implementation | `9a68ba3fb5b10bfea4001f91898a8f123fab29dc` | Advertised by `evidence/textview-selection-isolation-2026-09-01` |
 | SelectionSet prototype evidence | `a55b82c68040621d52dca4e2bf0e7cf76ff5e85f` | Advertised by `evidence/selection-set-prototype-2026-09-01` |
@@ -236,6 +236,40 @@ the one required entry. The exact-head hosted rerun and Jig application-level
 verification remain pending. The evidence refs are published; the runtime and
 component adoption tags remain pending.
 
+## Security refresh after component adoption
+
+Component merge `ab22b497153eb84f426a137b52d37d9afc2bbc39` remains
+recoverable through immutable tag `jig-adopted/component-2026-09-01.1`. The
+follow-up security branch pairs the component with runtime
+`781c86514dff3e667b672047bb76cef440d3f22e` without changing that tag.
+
+The follow-up queue is:
+
+- `f57c7311` updates only the locked transitive graph needed to remove
+  `crossbeam-epoch` 0.9.18, `h2` 0.4.13, `quick-xml` 0.39.2, and the yanked
+  `chacha20` 0.10.1 and `spin` 0.9.8/0.10.0 releases;
+- `bc5f4771` makes the component repository continuously check its standalone
+  lockfile with `cargo deny check advisories`;
+- `7732ca3f` removes a fixed-executor-turn assumption from the pending-read
+  WebSocket regression while preserving exact pong, write, and close proof;
+- `15ec0610` uses the paired runtime's semver-compatible synchronized-animation
+  accessor in component tests; and
+- `65ad28df` applies the same bounded settlement proof to the sibling
+  closed-socket write regression found during external review.
+
+The refreshed lock resolves the fixed releases `crossbeam-epoch` 0.9.20,
+`h2` 0.4.16, `quick-xml` 0.41.0, `chacha20` 0.10.2, `spin` 0.9.9, and `spin`
+0.10.1. `cargo metadata --locked --format-version 1` succeeds without changing
+the lockfile, whose SHA-256 is
+`118b6edf676bd02def6f9882b34932e80ffb0630613916384fbbebf98642a84e`.
+`cargo fmt --all -- --check`, `git diff --check`, `actionlint` over both hosted
+workflows, exact runtime remote reachability, and source verification of
+`Animation::is_synced()` are green. A local component-shell build and local
+`cargo-deny` execution were intentionally not started while shared disk space
+was constrained; the exact-pair hosted component matrix and the new Security
+Advisories job are the required proof boundary. Publication, hosted proof,
+merge, and a new synchronized adoption tag remain pending.
+
 ## Bounded external review record
 
 The aggregate reconciliation diff from `034ce6bb` through `6bc42a69` was
@@ -267,6 +301,18 @@ initialized, and a production-runtime regression now guards the withheld timer
 global anyway. The suggested coordinate test was not added because the accepted
 geometry fix restores the already-tested pre-change mechanism rather than
 changing the observable rectangle.
+
+A fifth bounded review covered the post-adoption lock, advisory workflow,
+WebSocket regressions, and synchronized-animation test adaptation. Its
+confirmed finding removed the same fixed-turn scheduling assumption from the
+sibling closed-socket write regression. The lockfile-version findings were
+rejected after locked metadata resolved without mutating the lock; the
+advisory-policy findings were rejected against cargo-deny 0.20.2's current
+configuration and this repository's standalone-lock ownership; and the
+accessor finding was rejected after verification against the exact published
+runtime source. The reviewer independently confirmed that the pending-read
+regression retains the production transport assertions and does not hide a
+socket actor failure.
 
 ## Adoption and publication gates
 

@@ -40,7 +40,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: skylartaylor/gpui-ce-jig
-          ref: 7bcc3ebc46d88f4c4c4fc21365825fe3dff2054b
+          ref: 781c86514dff3e667b672047bb76cef440d3f22e
           path: .gpui-runtime
       - name: Patch GPUI-CE crates to the exact candidate
         shell: bash
@@ -137,7 +137,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: skylartaylor/gpui-ce-jig
-          ref: 7bcc3ebc46d88f4c4c4fc21365825fe3dff2054b
+          ref: 781c86514dff3e667b672047bb76cef440d3f22e
           path: .gpui-runtime
       - name: Patch GPUI-CE crates to the exact candidate
         shell: bash
@@ -204,7 +204,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: skylartaylor/gpui-ce-jig
-          ref: 7bcc3ebc46d88f4c4c4fc21365825fe3dff2054b
+          ref: 781c86514dff3e667b672047bb76cef440d3f22e
           path: .gpui-runtime
       - name: Patch GPUI-CE crates to the exact candidate
         shell: bash
@@ -281,7 +281,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: skylartaylor/gpui-ce-jig
-          ref: 7bcc3ebc46d88f4c4c4fc21365825fe3dff2054b
+          ref: 781c86514dff3e667b672047bb76cef440d3f22e
           path: .gpui-runtime
       - name: Patch GPUI-CE crates to the exact candidate
         shell: bash
