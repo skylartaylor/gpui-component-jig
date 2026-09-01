@@ -56,7 +56,9 @@ The local implementation queue is:
 - `63522821` restores the exact Longbridge QuickJS/LLRT dependency line,
   preserves shell pointer geometry while resolving the current prepaint API,
   imports the current runtime color extension, and keeps the shell outside the
-  intentionally disabled registry release graph.
+  intentionally disabled registry release graph; and
+- `46912ca6` restores the rquickjs 0.12 import-attribute resolver and loader
+  signatures retained by Longbridge.
 
 | Conflicted path | Resolution |
 | --- | --- |
@@ -165,7 +167,7 @@ incompatibility warning.
 
 These checks predate the bounded-review remediation commit and remain historical
 evidence rather than proof of the current candidate. The current candidate
-implementation commit `63522821971034e4f818b7e35a7f8b24a4c1d02b`
+implementation commit `46912ca61bba4e606fa8ba5a545d732facc2cc0a`
 is paired with published runtime commit
 `7bcc3ebc46d88f4c4c4fc21365825fe3dff2054b`. It has passed
 `cargo fmt --all -- --check`, `git diff --check`, `actionlint` for both workflow
@@ -187,10 +189,17 @@ trait was missing. `63522821` remediates those common failures and adds a
 production-runtime timer-authority regression. A focused base color regression
 run was stopped during dependency compilation when shared disk space fell to
 11 GiB; it produced no test result. The current remediation was not compiled
-locally because only 15 GiB remained; its exact-head hosted rerun, full
-workspace, all-target, cross-platform, example/story, shell, and Jig
-application-level verification remain pending. The evidence refs are published;
-the runtime and component adoption tags remain pending.
+locally because only 15 GiB remained. Its first hosted rerun
+(`33557656470` at `7fac5d29cd69afc130f0df85d6c3966a31758077`)
+confirmed all eight substantive jobs resolve the exact runtime and reach shell
+compilation on macOS, Linux, and Windows, then failed on the same three
+diagnostics: the HostModule resolver and loader still had the prior rquickjs
+0.11 arities, and the explicit prepaint call left one trait import unused.
+`46912ca6` restores Longbridge's rquickjs 0.12 `ImportAttributes` signatures and
+removes that import. Its exact-head hosted rerun, full workspace, all-target,
+cross-platform, example/story, shell, and Jig application-level verification
+remain pending. The evidence refs are published; the runtime and component
+adoption tags remain pending.
 
 ## Bounded external review record
 
