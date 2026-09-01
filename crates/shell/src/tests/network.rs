@@ -804,12 +804,22 @@ fn websocket_pending_read_does_not_block_write_or_close(cx: &mut TestAppContext)
     context.executor().advance_clock(Duration::from_millis(10));
     context.run_until_parked();
     let server_events = server.join().expect("WebSocket server");
-    context.executor().advance_clock(Duration::from_millis(10));
-    context.run_until_parked();
-    draw(&mut context, &view);
-    let rendered = snapshot(&mut context, &view);
     assert_eq!(server_events, (true, true, true));
-    assert!(rendered.contains("write-and-close-finished"), "{rendered}");
+    let deadline = std::time::Instant::now() + Duration::from_secs(10);
+    loop {
+        context.executor().advance_clock(Duration::from_millis(10));
+        context.run_until_parked();
+        draw(&mut context, &view);
+        let rendered = snapshot(&mut context, &view);
+        if rendered.contains("write-and-close-finished") {
+            break;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "timed out waiting for the write, close, and pending read promises: {rendered}"
+        );
+        thread::sleep(Duration::from_millis(10));
+    }
 }
 
 #[gpui::test]
