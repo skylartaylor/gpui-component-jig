@@ -1884,6 +1884,107 @@ mod tests {
         (view, cx)
     }
 
+    struct PaneScopeTestView {
+        left: Entity<TextViewState>,
+        right: Entity<TextViewState>,
+        left_scope: TextSelectionScopeId,
+        right_scope: TextSelectionScopeId,
+    }
+
+    impl PaneScopeTestView {
+        fn new(cx: &mut Context<Self>) -> Self {
+            Self {
+                left: cx.new(|cx| TextViewState::markdown("Left pane text", cx)),
+                right: cx.new(|cx| TextViewState::markdown("Right pane text", cx)),
+                left_scope: TextSelectionScopeId::new(),
+                right_scope: TextSelectionScopeId::new(),
+            }
+        }
+    }
+
+    impl Render for PaneScopeTestView {
+        fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+            div()
+                .flex()
+                .size_full()
+                .child(
+                    div()
+                        .w(px(240.))
+                        .h(px(80.))
+                        .child(TextView::new(&self.left).selectable(true))
+                        .text_selection_scope(self.left_scope),
+                )
+                .child(
+                    div()
+                        .w(px(240.))
+                        .h(px(80.))
+                        .child(TextView::new(&self.right).selectable(true))
+                        .text_selection_scope(self.right_scope),
+                )
+        }
+    }
+
+    #[gpui::test]
+    fn durable_content_scopes_isolate_panes_across_redraws(cx: &mut TestAppContext) {
+        cx.update(crate::init);
+        let (root, cx) = cx.add_window_view(|window, cx| {
+            let view = cx.new(PaneScopeTestView::new);
+            Root::new(view, window, cx)
+        });
+        let view = root.read_with(cx, |root, _| {
+            root.view().clone().downcast::<PaneScopeTestView>().unwrap()
+        });
+        cx.run_until_parked();
+        cx.update(|window, cx| {
+            let _ = window.draw(cx);
+        });
+
+        let (left_scope, right_scope) =
+            view.read_with(cx, |view, _| (view.left_scope, view.right_scope));
+        cx.update(|window, cx| {
+            Root::update(window, cx, |root, window, cx| {
+                root.activate_content_text_selection_scope(left_scope, window, cx)
+            });
+            let _ = window.draw(cx);
+        });
+
+        let (left_bounds, right_bounds) = view.read_with(cx, |view, cx| {
+            (view.left.read(cx).bounds(), view.right.read(cx).bounds())
+        });
+        drag(
+            cx,
+            point(left_bounds.left() + px(1.), left_bounds.center().y),
+            point(right_bounds.right() + px(20.), right_bounds.center().y),
+        );
+        assert!(window_selected_text(cx).contains("Left pane text"));
+        assert!(!window_selected_text(cx).contains("Right pane text"));
+
+        view.update(cx, |_, cx| cx.notify());
+        cx.update(|window, cx| {
+            let _ = window.draw(cx);
+        });
+        assert_eq!(
+            root.read_with(cx, |root, _| root.active_text_selection_scope()),
+            left_scope
+        );
+        assert!(window_selected_text(cx).contains("Left pane text"));
+
+        cx.update(|window, cx| {
+            Root::update(window, cx, |root, window, cx| {
+                root.activate_content_text_selection_scope(right_scope, window, cx)
+            });
+            let _ = window.draw(cx);
+        });
+        assert!(window_selected_text(cx).is_empty());
+        drag(
+            cx,
+            point(right_bounds.left() + px(1.), right_bounds.center().y),
+            point(right_bounds.right() + px(20.), right_bounds.center().y),
+        );
+        assert!(!window_selected_text(cx).contains("Left pane text"));
+        assert!(window_selected_text(cx).contains("Right pane text"));
+    }
+
     /// Advance past the modal open animation so it reaches its resting position,
     /// then redraw so its TextViews register and their bounds are stable for the
     /// subsequent drag.

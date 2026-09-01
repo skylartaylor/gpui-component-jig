@@ -3019,6 +3019,16 @@ mod tests {
         });
     }
 
+    #[test]
+    fn allocated_scopes_are_distinct_from_the_default_and_each_other() {
+        let first = TextSelectionScopeId::new();
+        let second = TextSelectionScopeId::new();
+
+        assert_ne!(first, TextSelectionScopeId::default());
+        assert_ne!(second, TextSelectionScopeId::default());
+        assert_ne!(first, second);
+    }
+
     #[gpui::test]
     fn blank_only_drag_never_publishes_or_copies_selection(cx: &mut TestAppContext) {
         cx.update(|cx| {
