@@ -11,15 +11,15 @@ and the runtime/component proof matrix is green at that exact pair.
 | --- | --- | --- |
 | Longbridge GPUI Component | `5cb094628d27acbd557a1c22fd830417a702f0e5` | Semantic upstream |
 | GPUI-CE component compatibility fork | `034ce6bb28fb7e820c47dd22ef9d14c5e7113dca` | Reconciliation base |
-| GPUI-CE runtime candidate | `92f24796ba5edac24025f9b1ea1d04c817407477` | Local integrated candidate; unadvertised and not adoptable |
+| GPUI-CE runtime candidate | `7bcc3ebc46d88f4c4c4fc21365825fe3dff2054b` | Published as `jig/runtime-refresh-2026-09`; pending adoption tag and not adoptable |
 | Historical Jig component pin | `5a35fd7aeb499469c82480257d571a6c0367edb8` | Recoverable predecessor |
-| Unpublished pane isolation implementation | `9a68ba3fb5b10bfea4001f91898a8f123fab29dc` | Local evidence only |
-| SelectionSet prototype evidence | `a55b82c68040621d52dca4e2bf0e7cf76ff5e85f` | Local evidence only |
+| Pane isolation implementation | `9a68ba3fb5b10bfea4001f91898a8f123fab29dc` | Advertised by `evidence/textview-selection-isolation-2026-09-01` |
+| SelectionSet prototype evidence | `a55b82c68040621d52dca4e2bf0e7cf76ff5e85f` | Advertised by `evidence/selection-set-prototype-2026-09-01` |
 
 The local annotated tags `evidence/textview-selection-isolation-local` and
-`evidence/selection-set-prototype-local` protect the two unpublished evidence
-commits in this clone. They are deliberately not advertised and therefore do
-not satisfy the publication/recovery gate.
+`evidence/selection-set-prototype-local` continue to protect the original local
+evidence names. The corresponding dated annotated evidence tags are published
+and satisfy the evidence publication/recovery gate.
 
 The binary diff from the owned prototype worktree at `815f62202ae5c97cfc0761dbf29a01a48a9e50be`
 and the binary diff represented by `a55b82c68040621d52dca4e2bf0e7cf76ff5e85f`
@@ -42,7 +42,14 @@ The local implementation queue is:
 - `11ea6f30` adapts the base test corpus to the same APIs; and
 - `740c3c9d` preserves exact full transition durations instead of extending
   them by a floating-point rounding nanosecond; and
-- `fc4623a7` satisfies current Rust lint rules without changing behavior.
+- `fc4623a7` satisfies current Rust lint rules without changing behavior; and
+- `06c1a7a0` preserves hue, alpha, CSS color, decimal-feature, accessibility
+  test, dependency, and lockfile compatibility found during bounded review;
+- `50235ac8` disables registry publishing and documents Git-only distribution;
+- `4de65547` preserves positive hue interpolation across the 180-degree seam;
+- `547c5370` documents every direct dependency in the exact Git pair; and
+- `5ab9f6e6` makes hosted CI resolve and verify the exact published runtime
+  candidate before checking the component workspace.
 
 | Conflicted path | Resolution |
 | --- | --- |
@@ -122,7 +129,7 @@ equivalent upstream API.
 
 ## Current local proof status
 
-The following checks pass on component implementation commit
+The following checks passed on component implementation commit
 `fc4623a742d286bafee009c4af6fefb90521e71c`
 against runtime candidate `92f24796ba5edac24025f9b1ea1d04c817407477`:
 
@@ -149,11 +156,51 @@ the required spring primitives and synchronized repeat animation. The only
 warning from the exact-pair checks is the existing `block 0.1.6` future
 incompatibility warning.
 
-These local macOS checks do not satisfy adoption. Full workspace/all-target,
+These checks predate the bounded-review remediation commit and remain historical
+evidence rather than proof of the current candidate. The current candidate has
+implementation commit `5ab9f6e6492da5180253d6ef91eb66780b141bfb`
+is paired with published runtime commit
+`7bcc3ebc46d88f4c4c4fc21365825fe3dff2054b`. It has passed
+`cargo fmt --all -- --check`, `git diff --check`, `actionlint` for both workflow
+files, Python syntax and success-fixture checks for the runtime-resolution
+validator, static CI package-selector validation, and an exact remote-ref check
+for the runtime candidate. A focused base color regression run was stopped
+during dependency compilation when shared disk space fell to 11 GiB; it
+produced no test result. Full current-head workspace, all-target,
 cross-platform, hosted CI, example/story, shell, and Jig application-level
-verification remain pending, as do all advertised immutable refs.
+verification remain pending. The evidence refs are published; the runtime and
+component adoption tags remain pending.
+
+## Bounded external review record
+
+The aggregate reconciliation diff from `034ce6bb` through `6bc42a69` was
+3,276,921 bytes with 66,499 additions and exceeded the external reviewer's
+context before inference. It was therefore reviewed in two independently
+bounded semantic ranges:
+
+- `5cb094628d27acbd557a1c22fd830417a702f0e5..eee7b2a6`, covering merge
+  resolution against current Longbridge; and
+- `eee7b2a6..6bc42a69d837587c92e8b4beec289c41ed17fd11`, covering the local
+  compatibility queue.
+
+A third bounded review covered the remediation, CI, release-policy, README,
+and ledger delta from `6bc42a69`. Its confirmed findings produced the hue-seam
+fixes and regression tests, complete direct-dependency instructions,
+non-destructive Cargo configuration, exact runtime-resolution assertion,
+decimal CI check, and ledger corrections recorded above. The final literal
+runtime pin was then updated to the reviewed public runtime commit and verified
+against the remote.
 
 ## Adoption and publication gates
+
+### Distribution boundary
+
+This fork is distributed only through advertised immutable Git refs paired
+with the exact GPUI-CE runtime ref recorded above. Automated crates.io release
+is intentionally disabled: the current workspace contains non-publishable
+base/UI packages and does not have a closed registry dependency graph. Making
+that graph publishable, assigning registry versions, and restoring a registry
+workflow require a separate packaging and versioning decision.
 
 Before a consumer update:
 
