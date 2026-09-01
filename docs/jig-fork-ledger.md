@@ -51,7 +51,12 @@ The local implementation queue is:
 - `5ab9f6e6` makes hosted CI resolve and verify the exact published runtime
   candidate before checking the component workspace; and
 - `baac0ccd` relocates the checked-out runtime outside the component workspace
-  so its inherited workspace dependencies resolve against the runtime root.
+  so its inherited workspace dependencies resolve against the runtime root;
+- `1bcf4339` records the successful outside-workspace resolution proof; and
+- `63522821` restores the exact Longbridge QuickJS/LLRT dependency line,
+  preserves shell pointer geometry while resolving the current prepaint API,
+  imports the current runtime color extension, and keeps the shell outside the
+  intentionally disabled registry release graph.
 
 | Conflicted path | Resolution |
 | --- | --- |
@@ -160,23 +165,32 @@ incompatibility warning.
 
 These checks predate the bounded-review remediation commit and remain historical
 evidence rather than proof of the current candidate. The current candidate
-implementation commit `baac0ccd45f4c34da2cf1a0cf26ba904d0db9cff`
+implementation commit `63522821971034e4f818b7e35a7f8b24a4c1d02b`
 is paired with published runtime commit
 `7bcc3ebc46d88f4c4c4fc21365825fe3dff2054b`. It has passed
 `cargo fmt --all -- --check`, `git diff --check`, `actionlint` for both workflow
 files, an exact `cargo metadata` path-resolution check against the paired
 runtime, Python syntax and success-fixture checks for the runtime-resolution
-validator, static CI package-selector validation, and an exact remote-ref check
-for the runtime candidate. The first hosted run failed before compilation
-because a runtime checkout nested under the component workspace inherited the
-wrong workspace root. `baac0ccd` moves that checkout to the runner's temporary
-directory; the same outside-workspace topology passes the exact local metadata
-validator. A focused base color regression run was stopped during dependency
-compilation when shared disk space fell to 11 GiB; it produced no test result.
-Full current-head workspace, all-target,
-cross-platform, hosted CI, example/story, shell, and Jig application-level
-verification remain pending. The evidence refs are published; the runtime and
-component adoption tags remain pending.
+validator, static CI package-selector validation, an exact remote-ref check for
+the runtime candidate, and locked shell Cargo metadata resolving `rquickjs`
+0.12.2 plus every LLRT module to revision `7b95c82a`. The first hosted run
+failed before compilation because a runtime checkout nested under the component
+workspace inherited the wrong workspace root. `baac0ccd` moves that checkout to
+the runner's temporary directory; the same outside-workspace topology passes
+the exact local metadata validator. The next exact-head hosted run
+(`33554501485` at `1bcf433966d392dc128a6f5559e3533eb5610e93`)
+passed runtime checkout and path-resolution setup on macOS, Linux, and Windows,
+then all eight substantive jobs reached and failed on the same shell compile
+errors: source written for rquickjs 0.12 was paired with 0.11, two prepaint
+calls were ambiguous against the current GPUI API, and one color extension
+trait was missing. `63522821` remediates those common failures and adds a
+production-runtime timer-authority regression. A focused base color regression
+run was stopped during dependency compilation when shared disk space fell to
+11 GiB; it produced no test result. The current remediation was not compiled
+locally because only 15 GiB remained; its exact-head hosted rerun, full
+workspace, all-target, cross-platform, example/story, shell, and Jig
+application-level verification remain pending. The evidence refs are published;
+the runtime and component adoption tags remain pending.
 
 ## Bounded external review record
 
@@ -197,6 +211,18 @@ non-destructive Cargo configuration, exact runtime-resolution assertion,
 decimal CI check, and ledger corrections recorded above. The final literal
 runtime pin was then updated to the reviewed public runtime commit and verified
 against the remote.
+
+A fourth bounded review covered only the shell remediation from
+`1bcf433966d392dc128a6f5559e3533eb5610e93`. It confirmed the rquickjs/LLRT
+lock integrity, Ring crypto and Rust compression features, and the `ColorExt`
+import. Its geometry finding was accepted by explicitly selecting the existing
+`gpui_base::ElementExt` canvas-bounds contract; its stale publishability finding
+was accepted by setting the shell package to `publish = false`. Inspection of
+the exact LLRT initializers showed that the newly transitive timer crate is not
+initialized, and a production-runtime regression now guards the withheld timer
+global anyway. The suggested coordinate test was not added because the accepted
+geometry fix restores the already-tested pre-change mechanism rather than
+changing the observable rectangle.
 
 ## Adoption and publication gates
 
