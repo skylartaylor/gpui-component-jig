@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use gpui::{StyleRefinement, prelude::FluentBuilder, *};
 use gpui_component::{
-    ActiveTheme, Colorize as _, ElementExt, IconName, Sizable,
+    ActiveTheme, Colorize as _, IconName, Sizable,
     button::Button,
     checkbox::Checkbox,
     group_box::{GroupBox, GroupBoxVariants as _},
