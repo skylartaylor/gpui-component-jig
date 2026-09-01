@@ -49,7 +49,7 @@ use gpui::{
     AppContext as _, Bounds, Context, IntoElement, MouseButton, ParentElement, Pixels, Render,
     SharedString, StatefulInteractiveElement, Styled as _, Window,
 };
-use gpui_base::{ElementExt as _, Theme, Tooltip, TooltipRequest};
+use gpui_base::{Theme, Tooltip, TooltipRequest};
 
 use crate::{materialize::Behavior, root::ShellRoot, spec::Component};
 
