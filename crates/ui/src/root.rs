@@ -49,6 +49,8 @@ pub struct Root {
     /// The focus handle that will be restored after a dialog is closed with animation.
     /// Used to handle rapid dialog opening/closing to maintain correct focus chain.
     pending_focus_restore: Option<WeakFocusHandle>,
+    content_selection_scope: TextSelectionScopeId,
+    content_selection_scopes: Vec<TextSelectionScopeId>,
     window_id: gpui::WindowId,
 }
 
@@ -113,6 +115,8 @@ impl Root {
             window_shadow_size: window_border::SHADOW_SIZE,
             bordered: true,
             pending_focus_restore: None,
+            content_selection_scope: TextSelectionScopeId::default(),
+            content_selection_scopes: Vec::new(),
             window_id: window.window_handle().window_id(),
         }
     }
@@ -130,7 +134,52 @@ impl Root {
                     .as_ref()
                     .map(|sheet| sheet.selection_scope)
             })
-            .unwrap_or_default()
+            .unwrap_or(self.content_selection_scope)
+    }
+
+    /// Makes a durable content scope the active selectable region.
+    ///
+    /// A pane should retain one [`TextSelectionScopeId`] for its semantic
+    /// lifetime, wrap its selectable subtree with
+    /// [`gpui_base::ElementExt::text_selection_scope`], and activate it in its
+    /// pointer handler. Dialog and sheet scopes remain frontmost while open;
+    /// dismissing them restores this content scope.
+    pub fn activate_content_text_selection_scope(
+        &mut self,
+        scope: TextSelectionScopeId,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.content_selection_scopes
+            .retain(|candidate| *candidate != scope);
+        self.content_selection_scopes.push(scope);
+        self.content_selection_scope = scope;
+        TextSelection::activate_scope(self.active_text_selection_scope(), window, cx);
+        cx.notify();
+    }
+
+    /// Retires a durable content scope and selects a deterministic fallback.
+    ///
+    /// If the active pane disappears, the most recently activated surviving
+    /// scope becomes active. When no previously activated pane survives, Root
+    /// returns to [`TextSelectionScopeId::default`].
+    pub fn retire_content_text_selection_scope(
+        &mut self,
+        scope: TextSelectionScopeId,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.content_selection_scopes
+            .retain(|candidate| *candidate != scope);
+        if self.content_selection_scope == scope {
+            self.content_selection_scope = self
+                .content_selection_scopes
+                .last()
+                .copied()
+                .unwrap_or_default();
+        }
+        TextSelection::activate_scope(self.active_text_selection_scope(), window, cx);
+        cx.notify();
     }
 
     /// Enable or disable the Linux client-side window border wrapper.
@@ -281,7 +330,14 @@ impl Root {
             }
         }
 
-        Some(div().children(dialogs))
+        // Named so a test can assert the layer actually reached the screen. A
+        // dialog that opens into a root which never renders this layer looks
+        // exactly like one that does not open.
+        Some(
+            div()
+                .debug_selector(|| "dialog-layer".to_string())
+                .children(dialogs),
+        )
     }
 
     pub fn open_dialog<F>(&mut self, build: F, window: &mut Window, cx: &mut Context<'_, Root>)
@@ -308,7 +364,7 @@ impl Root {
         ));
         // Opening a modal confines selection to it; drop any background
         // selection so it cannot linger (or be copied) under the modal.
-        gpui_base::TextSelection::clear(window, cx);
+        TextSelection::activate_scope(self.active_text_selection_scope(), window, cx);
         cx.notify();
     }
 
@@ -324,7 +380,7 @@ impl Root {
         if let Some(handle) = self.close_dialog_internal() {
             window.focus(&handle, cx);
         }
-        gpui_base::TextSelection::clear(window, cx);
+        TextSelection::activate_scope(self.active_text_selection_scope(), window, cx);
         cx.notify();
     }
 
@@ -348,7 +404,7 @@ impl Root {
             })
             .detach();
         }
-        gpui_base::TextSelection::clear(window, cx);
+        TextSelection::activate_scope(self.active_text_selection_scope(), window, cx);
         cx.notify();
     }
 
@@ -362,7 +418,7 @@ impl Root {
         if let Some(handle) = previous_focused_handle.and_then(|h| h.upgrade()) {
             window.focus(&handle, cx);
         }
-        gpui_base::TextSelection::clear(window, cx);
+        TextSelection::activate_scope(self.active_text_selection_scope(), window, cx);
         cx.notify();
     }
 
@@ -393,7 +449,7 @@ impl Root {
         });
         // Opening a modal confines selection to it; drop any background
         // selection so it cannot linger (or be copied) under the modal.
-        gpui_base::TextSelection::clear(window, cx);
+        TextSelection::activate_scope(self.active_text_selection_scope(), window, cx);
         cx.notify();
     }
 
@@ -408,7 +464,7 @@ impl Root {
             window.focus(&previous_handle, cx);
         }
         self.active_sheet = None;
-        gpui_base::TextSelection::clear(window, cx);
+        TextSelection::activate_scope(self.active_text_selection_scope(), window, cx);
         cx.notify();
     }
 
@@ -570,10 +626,6 @@ impl Styled for Root {
 impl Render for Root {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         window.set_rem_size(cx.theme().font_size);
-        if !cx.has_global::<crate::global_state::UiGlobalState>() {
-            crate::global_state::init(cx);
-        }
-        crate::global_state::UiGlobalState::global_mut(cx).begin_selection_frame();
         let active_scope = self.active_text_selection_scope();
         TextSelection::activate_scope(active_scope, window, cx);
 
@@ -639,5 +691,95 @@ mod tests {
             Root::new(view, window, cx).bordered(false).bordered(true)
         });
         assert!(root.read_with(cx, |root, _| root.bordered));
+    }
+
+    #[gpui::test]
+    fn content_scope_activation_and_retirement_are_durable(cx: &mut TestAppContext) {
+        cx.update(crate::init);
+        let (root, cx) = cx.add_window_view(|window, cx| {
+            let view = cx.new(|_| TestView);
+            Root::new(view, window, cx)
+        });
+        let first = TextSelectionScopeId::new();
+        let second = TextSelectionScopeId::new();
+
+        cx.update(|window, cx| {
+            root.update(cx, |root, cx| {
+                root.activate_content_text_selection_scope(first, window, cx)
+            });
+        });
+        assert_eq!(
+            root.read_with(cx, |root, _| root.active_text_selection_scope()),
+            first
+        );
+
+        cx.update(|window, cx| {
+            root.update(cx, |root, cx| {
+                root.activate_content_text_selection_scope(second, window, cx);
+                root.activate_content_text_selection_scope(first, window, cx);
+                root.retire_content_text_selection_scope(first, window, cx);
+            });
+        });
+        assert_eq!(
+            root.read_with(cx, |root, _| root.active_text_selection_scope()),
+            second
+        );
+
+        cx.update(|window, cx| {
+            root.update(cx, |root, cx| {
+                root.retire_content_text_selection_scope(second, window, cx)
+            });
+        });
+        assert_eq!(
+            root.read_with(cx, |root, _| root.active_text_selection_scope()),
+            TextSelectionScopeId::default()
+        );
+    }
+
+    #[gpui::test]
+    fn closing_overlays_restores_the_active_content_scope(cx: &mut TestAppContext) {
+        cx.update(crate::init);
+        let (root, cx) = cx.add_window_view(|window, cx| {
+            let view = cx.new(|_| TestView);
+            Root::new(view, window, cx)
+        });
+        let content_scope = TextSelectionScopeId::new();
+
+        cx.update(|window, cx| {
+            root.update(cx, |root, cx| {
+                root.activate_content_text_selection_scope(content_scope, window, cx);
+                root.open_dialog(|dialog, _, _| dialog, window, cx);
+            });
+        });
+        assert_ne!(
+            root.read_with(cx, |root, _| root.active_text_selection_scope()),
+            content_scope
+        );
+
+        cx.update(|window, cx| {
+            root.update(cx, |root, cx| root.close_dialog(window, cx));
+        });
+        assert_eq!(
+            root.read_with(cx, |root, _| root.active_text_selection_scope()),
+            content_scope
+        );
+
+        cx.update(|window, cx| {
+            root.update(cx, |root, cx| {
+                root.open_sheet_at(Placement::Right, |sheet, _, _| sheet, window, cx);
+            });
+        });
+        assert_ne!(
+            root.read_with(cx, |root, _| root.active_text_selection_scope()),
+            content_scope
+        );
+
+        cx.update(|window, cx| {
+            root.update(cx, |root, cx| root.close_sheet(window, cx));
+        });
+        assert_eq!(
+            root.read_with(cx, |root, _| root.active_text_selection_scope()),
+            content_scope
+        );
     }
 }

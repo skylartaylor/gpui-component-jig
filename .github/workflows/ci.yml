@@ -27,9 +27,44 @@ jobs:
     runs-on: ${{ matrix.run_on }}
     steps:
       - uses: actions/checkout@v4
+      - name: Check out exact GPUI-CE runtime candidate
+        uses: actions/checkout@v4
+        with:
+          repository: skylartaylor/gpui-ce-jig
+          ref: 7bcc3ebc46d88f4c4c4fc21365825fe3dff2054b
+          path: .gpui-runtime
+      - name: Patch GPUI-CE crates to the exact candidate
+        shell: bash
+        run: |
+          runtime_path="$RUNNER_TEMP/gpui-runtime-candidate"
+          if command -v cygpath >/dev/null; then
+            runtime_shell_path="$(cygpath -u "$runtime_path")"
+          else
+            runtime_shell_path="$runtime_path"
+          fi
+          mv "$PWD/.gpui-runtime" "$runtime_shell_path"
+          if command -v cygpath >/dev/null; then
+            runtime_path="$(cygpath -m "$runtime_shell_path")"
+          fi
+          echo "GPUI_RUNTIME_PATH=$runtime_path" >> "$GITHUB_ENV"
+          cargo_config_home="${CARGO_HOME:-$HOME/.cargo}"
+          mkdir -p "$cargo_config_home"
+          cat >> "$cargo_config_home/config.toml" <<EOF
+          [patch.crates-io]
+          gpui-ce = { path = "$runtime_path/crates/gpui" }
+          gpui_ce_platform = { path = "$runtime_path/crates/gpui_platform" }
+          gpui_ce_web = { path = "$runtime_path/crates/gpui_web" }
+          gpui_ce_macros = { path = "$runtime_path/crates/gpui_macros" }
+          EOF
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           components: clippy
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Verify exact GPUI-CE runtime resolution
+        shell: bash
+        run: cargo metadata --format-version 1 | python script/verify-gpui-runtime.py "$GPUI_RUNTIME_PATH"
       - name: Install system dependencies
         if: ${{ matrix.run_on != 'windows-latest' }}
         run: script/bootstrap
@@ -64,33 +99,68 @@ jobs:
       - name: Lint
         if: ${{ matrix.run_on == 'macos-latest' }}
         run: |
-          cargo clippy -p gpui-component -p gpui-component-story -p gpui-component-assets -- --deny warnings
+          cargo clippy -p gpui_ce_components -p gpui-component-story -p gpui_ce_components_assets -- --deny warnings
       - name: Check without default features (tree-sitter disabled)
         if: ${{ matrix.run_on == 'ubuntu-latest' }}
         run: |
-          cargo check -p gpui-component --no-default-features
+          cargo check -p gpui_ce_components --no-default-features
+          cargo check -p gpui_ce_components --features decimal
       - name: Test Linux
         if: ${{ matrix.run_on == 'ubuntu-latest' }}
         run: |
-          cargo test --workspace --exclude gpui-shell --features gpui-component-story/test-support
+          cargo test --workspace --exclude gpui_ce_components_shell --features gpui-component-story/test-support
       - name: Test Windows
         if: ${{ matrix.run_on == 'windows-latest' }}
         run: |
-          cargo test --workspace --exclude gpui-shell --features gpui-component-story/test-support
+          cargo test --workspace --exclude gpui_ce_components_shell --features gpui-component-story/test-support
       - name: Test MacOS
         if: ${{ matrix.run_on == 'macos-latest' }}
         run: |
-          cargo test --workspace --exclude gpui-shell --features gpui-component-story/test-support
-          cargo test -p gpui-component --doc
+          cargo test --workspace --exclude gpui_ce_components_shell --features gpui-component-story/test-support
+          cargo test -p gpui_ce_components --doc
 
   gpui-shell-core:
     name: GPUI Shell Core
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Check out exact GPUI-CE runtime candidate
+        uses: actions/checkout@v4
+        with:
+          repository: skylartaylor/gpui-ce-jig
+          ref: 7bcc3ebc46d88f4c4c4fc21365825fe3dff2054b
+          path: .gpui-runtime
+      - name: Patch GPUI-CE crates to the exact candidate
+        shell: bash
+        run: |
+          runtime_path="$RUNNER_TEMP/gpui-runtime-candidate"
+          if command -v cygpath >/dev/null; then
+            runtime_shell_path="$(cygpath -u "$runtime_path")"
+          else
+            runtime_shell_path="$runtime_path"
+          fi
+          mv "$PWD/.gpui-runtime" "$runtime_shell_path"
+          if command -v cygpath >/dev/null; then
+            runtime_path="$(cygpath -m "$runtime_shell_path")"
+          fi
+          echo "GPUI_RUNTIME_PATH=$runtime_path" >> "$GITHUB_ENV"
+          cargo_config_home="${CARGO_HOME:-$HOME/.cargo}"
+          mkdir -p "$cargo_config_home"
+          cat >> "$cargo_config_home/config.toml" <<EOF
+          [patch.crates-io]
+          gpui-ce = { path = "$runtime_path/crates/gpui" }
+          gpui_ce_platform = { path = "$runtime_path/crates/gpui_platform" }
+          gpui_ce_web = { path = "$runtime_path/crates/gpui_web" }
+          gpui_ce_macros = { path = "$runtime_path/crates/gpui_macros" }
+          EOF
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           components: clippy
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Verify exact GPUI-CE runtime resolution
+        run: cargo metadata --format-version 1 | python script/verify-gpui-runtime.py "$GPUI_RUNTIME_PATH"
       - name: Install system dependencies
         run: script/bootstrap
       - name: Setup | Cache Cargo
@@ -105,16 +175,83 @@ jobs:
           key: shell-core-cargo-x86_64-linux-gnu-${{ hashFiles('**/Cargo.lock') }}
       - name: Test runtime core without standard-library integration cases
         run: |
-          cargo test -p gpui-shell --release --lib -- \
+          cargo test -p gpui_ce_components_shell --release --lib -- \
             --skip tests::standard_runtime \
             --skip tests::network \
             --skip tests::fs \
             --skip tests::process \
             --skip tests::benchmark
-          cargo test -p gpui-shell --release tests::benchmark
-          cargo test -p gpui-shell --doc
+          cargo test -p gpui_ce_components_shell --release tests::benchmark
+          cargo test -p gpui_ce_components_shell --doc
       - name: Lint GPUI Shell
-        run: cargo clippy -p gpui-shell --all-targets -- -D warnings
+        run: cargo clippy -p gpui_ce_components_shell --all-targets -- -D warnings
+
+  gpui-component-shell:
+    name: GPUI Component Shell
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out exact GPUI-CE runtime candidate
+        uses: actions/checkout@v4
+        with:
+          repository: skylartaylor/gpui-ce-jig
+          ref: 7bcc3ebc46d88f4c4c4fc21365825fe3dff2054b
+          path: .gpui-runtime
+      - name: Patch GPUI-CE crates to the exact candidate
+        shell: bash
+        run: |
+          runtime_path="$RUNNER_TEMP/gpui-runtime-candidate"
+          if command -v cygpath >/dev/null; then
+            runtime_shell_path="$(cygpath -u "$runtime_path")"
+          else
+            runtime_shell_path="$runtime_path"
+          fi
+          mv "$PWD/.gpui-runtime" "$runtime_shell_path"
+          if command -v cygpath >/dev/null; then
+            runtime_path="$(cygpath -m "$runtime_shell_path")"
+          fi
+          echo "GPUI_RUNTIME_PATH=$runtime_path" >> "$GITHUB_ENV"
+          cargo_config_home="${CARGO_HOME:-$HOME/.cargo}"
+          mkdir -p "$cargo_config_home"
+          cat >> "$cargo_config_home/config.toml" <<EOF
+          [patch.crates-io]
+          gpui-ce = { path = "$runtime_path/crates/gpui" }
+          gpui_ce_platform = { path = "$runtime_path/crates/gpui_platform" }
+          gpui_ce_web = { path = "$runtime_path/crates/gpui_web" }
+          gpui_ce_macros = { path = "$runtime_path/crates/gpui_macros" }
+          EOF
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: clippy
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Verify exact GPUI-CE runtime resolution
+        run: cargo metadata --format-version 1 | python script/verify-gpui-runtime.py "$GPUI_RUNTIME_PATH"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install system dependencies
+        run: script/bootstrap
+      - name: Setup | Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: component-shell-cargo-x86_64-linux-gnu-${{ hashFiles('**/Cargo.lock') }}
+      - name: Test component bindings
+        run: cargo test -p gpui-component-shell --all-targets
+      - name: Lint component bindings
+        run: cargo clippy -p gpui-component-shell --all-targets -- -D warnings
+      # The inventory test proves every public component is registered or
+      # explicitly deferred; this proves the JavaScript gallery covers what the
+      # inventory claims. Without it the two drift silently.
+      - name: Verify story coverage against the component inventory
+        run: node examples/js_story/fixtures/verify-coverage.mjs
 
   gpui-shell-standard-runtime:
     name: GPUI Shell Standard Runtime (${{ matrix.target }})
@@ -131,7 +268,42 @@ jobs:
     runs-on: ${{ matrix.run_on }}
     steps:
       - uses: actions/checkout@v4
+      - name: Check out exact GPUI-CE runtime candidate
+        uses: actions/checkout@v4
+        with:
+          repository: skylartaylor/gpui-ce-jig
+          ref: 7bcc3ebc46d88f4c4c4fc21365825fe3dff2054b
+          path: .gpui-runtime
+      - name: Patch GPUI-CE crates to the exact candidate
+        shell: bash
+        run: |
+          runtime_path="$RUNNER_TEMP/gpui-runtime-candidate"
+          if command -v cygpath >/dev/null; then
+            runtime_shell_path="$(cygpath -u "$runtime_path")"
+          else
+            runtime_shell_path="$runtime_path"
+          fi
+          mv "$PWD/.gpui-runtime" "$runtime_shell_path"
+          if command -v cygpath >/dev/null; then
+            runtime_path="$(cygpath -m "$runtime_shell_path")"
+          fi
+          echo "GPUI_RUNTIME_PATH=$runtime_path" >> "$GITHUB_ENV"
+          cargo_config_home="${CARGO_HOME:-$HOME/.cargo}"
+          mkdir -p "$cargo_config_home"
+          cat >> "$cargo_config_home/config.toml" <<EOF
+          [patch.crates-io]
+          gpui-ce = { path = "$runtime_path/crates/gpui" }
+          gpui_ce_platform = { path = "$runtime_path/crates/gpui_platform" }
+          gpui_ce_web = { path = "$runtime_path/crates/gpui_web" }
+          gpui_ce_macros = { path = "$runtime_path/crates/gpui_macros" }
+          EOF
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Verify exact GPUI-CE runtime resolution
+        shell: bash
+        run: cargo metadata --format-version 1 | python script/verify-gpui-runtime.py "$GPUI_RUNTIME_PATH"
       - name: Install system dependencies
         if: ${{ matrix.run_on != 'windows-latest' }}
         run: script/bootstrap
@@ -147,11 +319,11 @@ jobs:
           key: shell-standard-cargo-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
       - name: Test LLRT module integration
         run: |
-          cargo test -p gpui-shell --release tests::standard_runtime
-          cargo test -p gpui-shell --release tests::fs
-          cargo test -p gpui-shell --release tests::process
-          cargo test -p gpui-shell --release tests::network
-          cargo test -p gpui-shell --release tests::render
-          cargo test -p gpui-shell --release tests::snapshot
-          cargo test -p gpui-shell --release tests::host_api
-          cargo test -p gpui-shell --release tests::http_request
+          cargo test -p gpui_ce_components_shell --release tests::standard_runtime
+          cargo test -p gpui_ce_components_shell --release tests::fs
+          cargo test -p gpui_ce_components_shell --release tests::process
+          cargo test -p gpui_ce_components_shell --release tests::network
+          cargo test -p gpui_ce_components_shell --release tests::render
+          cargo test -p gpui_ce_components_shell --release tests::snapshot
+          cargo test -p gpui_ce_components_shell --release tests::host_api
+          cargo test -p gpui_ce_components_shell --release tests::http_request

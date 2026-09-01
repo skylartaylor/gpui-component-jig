@@ -1,8 +1,9 @@
 use gpui::{
     App, AppContext, Context, Entity, FocusHandle, Focusable, FontWeight, Hsla, IntoElement,
-    ParentElement, Render, SharedString, Styled, Window, div, linear_color_stop,
-    linear_gradient, prelude::FluentBuilder, px,
+    ParentElement, Render, SharedString, Styled, Window, div, linear_color_stop, linear_gradient,
+    prelude::FluentBuilder, px,
 };
+use gpui_component::Colorize as _;
 use gpui_component::{
     ActiveTheme, StyledExt,
     chart::{
@@ -15,7 +16,6 @@ use gpui_component::{
     separator::Separator,
     v_flex,
 };
-use gpui_component::Colorize as _;
 use serde::Deserialize;
 
 use super::StackedBarChart;
@@ -150,8 +150,7 @@ impl ChartStory {
                         name: node.name.clone(),
                         value: node.value.parse().unwrap_or(0.),
                         growth: node.growth.parse().ok(),
-                        color: Hsla::parse_hex(node.color.as_ref())
-                            .unwrap_or(gpui::black()),
+                        color: Hsla::parse_hex(node.color.as_ref()).unwrap_or(gpui::black()),
                     })
                     .collect();
                 // Skip links with unknown node keys or unparsable values
@@ -686,10 +685,11 @@ impl Render for ChartStory {
                                     let hi = project(bar.origin.x + bar.size.width, bar.origin.y);
                                     let lerp = |t: f32| {
                                         gpui::hsla(
-                                            (c1.color.hue.into_degrees()
-                                                + (c2.color.hue.into_degrees()
-                                                    - c1.color.hue.into_degrees())
+                                            (c1.color.hue.into_positive_degrees()
+                                                + (c2.color.hue.into_positive_degrees()
+                                                    - c1.color.hue.into_positive_degrees())
                                                     * t)
+                                                .rem_euclid(360.)
                                                 / 360.,
                                             c1.color.saturation
                                                 + (c2.color.saturation - c1.color.saturation) * t,

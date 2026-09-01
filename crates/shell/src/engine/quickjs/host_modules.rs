@@ -60,7 +60,7 @@ use rquickjs::{
     Array, Ctx, Error as JsError, Exception, FromJs, IntoJs, Module, Object, Promise,
     Result as JsResult, Value,
     function::{Func, Rest},
-    loader::{Loader, Resolver},
+    loader::{ImportAttributes, Loader, Resolver},
     module::Declared,
 };
 
@@ -192,6 +192,7 @@ impl Resolver for HostModuleLoader {
         _ctx: &Ctx<'js>,
         base: &str,
         name: &str,
+        _attributes: Option<ImportAttributes<'js>>,
     ) -> JsResult<String> {
         // Only a bare specifier: a relative or rooted path is the application's
         // own file, and answering for one here would let a registered module
@@ -214,6 +215,7 @@ impl Loader for HostModuleLoader {
         &mut self,
         ctx: &Ctx<'js>,
         name: &str,
+        _attributes: Option<ImportAttributes<'js>>,
     ) -> JsResult<Module<'js, Declared>> {
         let Some((module, generation)) = Self::untag(name) else {
             // Not a name this resolver produced, so it belongs to a loader
@@ -266,6 +268,20 @@ impl Loader for HostModuleLoader {
                     "export const {function} = __host_function({module:?}, {function:?});"
                 )
             };
+        }
+        for component in found.component_names() {
+            if !is_identifier(component) {
+                return Err(Exception::throw_message(
+                    ctx,
+                    &format!(
+                        "HostModule `{module}` component `{component}` is not a JavaScript identifier"
+                    ),
+                ));
+            }
+            let _ = writeln!(
+                source,
+                "export const {component} = globalThis.__gpui.component({module:?}, {component:?});"
+            );
         }
 
         Module::declare(ctx.clone(), name, source)
@@ -327,7 +343,7 @@ impl<'js> IntoJs<'js> for Binding {
 }
 
 /// One argument, converted on the way in.
-struct Argument(HostValue);
+pub(super) struct Argument(pub(super) HostValue);
 
 impl<'js> FromJs<'js> for Argument {
     fn from_js(ctx: &Ctx<'js>, value: Value<'js>) -> JsResult<Self> {
@@ -335,7 +351,7 @@ impl<'js> FromJs<'js> for Argument {
     }
 }
 
-fn from_js<'js>(ctx: &Ctx<'js>, value: Value<'js>, depth: usize) -> JsResult<HostValue> {
+pub(super) fn from_js<'js>(ctx: &Ctx<'js>, value: Value<'js>, depth: usize) -> JsResult<HostValue> {
     if depth > MAX_DEPTH {
         return Err(Exception::throw_type(
             ctx,
@@ -402,7 +418,7 @@ impl<'js> IntoJs<'js> for Bridged {
     }
 }
 
-fn into_js<'js>(ctx: &Ctx<'js>, value: HostValue) -> JsResult<Value<'js>> {
+pub(super) fn into_js<'js>(ctx: &Ctx<'js>, value: HostValue) -> JsResult<Value<'js>> {
     Ok(match value {
         HostValue::Null => Value::new_null(ctx.clone()),
         HostValue::Bool(flag) => Value::new_bool(ctx.clone(), flag),

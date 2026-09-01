@@ -93,6 +93,18 @@ fn callback_style_fs_module_is_not_part_of_the_shell_contract() {
     assert!(error.to_string().contains("fs"), "{error:#}");
 }
 
+#[test]
+fn standard_modules_do_not_claim_withheld_timer_globals() {
+    let runtime = ShellRuntime::new_isolated().expect("runtime");
+    let error = runtime
+        .load_source(
+            "withheld-timer.js",
+            r#"setTimeout(() => {}, 0); export default class Probe {}"#,
+        )
+        .expect_err("the Standard Runtime must not install ambient timers");
+    assert!(error.to_string().contains("cx.timer.after"), "{error:#}");
+}
+
 #[gpui::test]
 fn safe_host_standard_modules_replace_the_old_gpui_exports(cx: &mut TestAppContext) {
     let source = r#"

@@ -158,7 +158,7 @@ impl HslaSliders {
 
     fn write(&self, color: Hsla, window: &mut Window, cx: &mut App) {
         let components = [
-            (&self.hue, color.color.hue.into_degrees() / 360.),
+            (&self.hue, color.color.hue.into_positive_degrees() / 360.),
             (&self.saturation, color.color.saturation),
             (&self.lightness, color.color.lightness),
             (&self.alpha, color.alpha),
@@ -833,6 +833,23 @@ mod tests {
         state.read_with(cx, |state, cx| {
             assert_eq!(state.hex_input().read(cx).value().as_str(), "#FF0000");
             assert_eq!(state.sliders().lightness().read(cx).value().start(), 0.5);
+        });
+    }
+
+    #[gpui::test]
+    fn hue_past_180_degrees_round_trips_through_the_slider(cx: &mut TestAppContext) {
+        let color = hsla(2. / 3., 0.75, 0.4, 0.8);
+        let (state, cx) =
+            cx.add_window_view(|window, cx| ColorPickerState::new(window, cx).default_value(color));
+        cx.update(|window, cx| {
+            state.update(cx, |state, cx| state.sync_pending_value(window, cx));
+        });
+
+        state.read_with(cx, |state, cx| {
+            let hue = state.sliders().hue().read(cx).value().start();
+            assert!((hue - 2. / 3.).abs() < 1e-6);
+            let round_tripped = state.sliders().read(cx);
+            assert!((round_tripped.color.hue.into_positive_degrees() - 240.).abs() < 1e-4);
         });
     }
 

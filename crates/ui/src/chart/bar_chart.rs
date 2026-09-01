@@ -1,4 +1,4 @@
-use std::{ops::RangeInclusive, rc::Rc};
+use std::{hash::Hash, ops::RangeInclusive, rc::Rc};
 
 use gpui::{
     AnyElement, App, Background, Bounds, Corners, ElementId, Hsla, IntoElement, LinearColorStop,
@@ -31,7 +31,7 @@ const VALUE_AXIS_GAP: f32 = 32.;
 pub struct BarChart<T, B, V>
 where
     T: 'static,
-    B: PartialEq + Into<SharedString> + 'static,
+    B: Eq + Hash + Into<SharedString> + 'static,
     V: Copy + PartialOrd + Num + ToPrimitive + Sealed + 'static,
 {
     data: Vec<T>,
@@ -55,7 +55,7 @@ where
 
 impl<T, B, V> BarChart<T, B, V>
 where
-    B: PartialEq + Into<SharedString> + 'static,
+    B: Eq + Hash + Into<SharedString> + 'static,
     V: Copy + PartialOrd + Num + ToPrimitive + Sealed + 'static,
 {
     pub fn new<I>(data: I) -> Self
@@ -323,7 +323,7 @@ where
 
 impl<T, B, V> Plot for BarChart<T, B, V>
 where
-    B: PartialEq + Into<SharedString> + 'static,
+    B: Eq + Hash + Into<SharedString> + 'static,
     V: Copy + PartialOrd + Num + ToPrimitive + Sealed + 'static,
 {
     fn paint(&mut self, bounds: Bounds<Pixels>, window: &mut Window, cx: &mut App) {
@@ -726,8 +726,11 @@ fn clip_stops_to_bar(stops: [LinearColorStop; 2]) -> [LinearColorStop; 2] {
     let b_color: Hsla = b.color.into();
     let lerp = |t: f32| -> Hsla {
         gpui::hsla(
-            (a_color.color.hue.into_degrees()
-                + (b_color.color.hue.into_degrees() - a_color.color.hue.into_degrees()) * t)
+            (a_color.color.hue.into_positive_degrees()
+                + (b_color.color.hue.into_positive_degrees()
+                    - a_color.color.hue.into_positive_degrees())
+                    * t)
+                .rem_euclid(360.)
                 / 360.,
             a_color.color.saturation + (b_color.color.saturation - a_color.color.saturation) * t,
             a_color.color.lightness + (b_color.color.lightness - a_color.color.lightness) * t,
@@ -794,6 +797,24 @@ fn value_tick_positions(far: f32, baseline: f32, steps: usize) -> Vec<f32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn clipped_gradient_interpolates_positive_hues_across_180_degrees() {
+        let stops = [
+            LinearColorStop {
+                color: gpui::hsla(100. / 360., 1., 0.5, 1.).into(),
+                percentage: -1.,
+            },
+            LinearColorStop {
+                color: gpui::hsla(260. / 360., 1., 0.5, 1.).into(),
+                percentage: 1.,
+            },
+        ];
+
+        let [clipped, _] = clip_stops_to_bar(stops);
+        let color: Hsla = clipped.color.into();
+        assert!((color.color.hue.into_positive_degrees() - 180.).abs() < 1e-4);
+    }
 
     #[test]
     fn test_label_below_zero_line() {

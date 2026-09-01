@@ -37,11 +37,26 @@ pub(crate) fn popover_ring(cx: &App) -> Hsla {
 
 fn with_alpha(color: Hsla, alpha: f32) -> Hsla {
     hsla(
-        color.color.hue.into_degrees() / 360.,
+        color.color.hue.into_positive_degrees() / 360.,
         color.color.saturation,
         color.color.lightness,
         alpha.clamp(0., 1.),
     )
+}
+
+#[cfg(test)]
+mod color_tests {
+    use gpui::hsla;
+
+    use super::with_alpha;
+
+    #[test]
+    fn with_alpha_preserves_positive_hues() {
+        let color = with_alpha(hsla(2. / 3., 0.75, 0.4, 1.), 0.5);
+
+        assert!((color.color.hue.into_positive_degrees() - 240.).abs() < 1e-4);
+        assert_eq!(color.alpha, 0.5);
+    }
 }
 
 /// shadcn/ui's popup surface shadow — a hairline `ring` plus `shadow-md` — at

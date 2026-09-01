@@ -252,7 +252,7 @@ impl ColorPicker {
                 hsla(h, 1.0, 0.5, 1.0)
             })
             .collect::<Vec<_>>();
-        let hue = slider_color.color.hue.into_degrees() / 360.;
+        let hue = slider_color.color.hue.into_positive_degrees() / 360.;
         let lightness = slider_color.color.lightness;
         let saturation = slider_color.color.saturation;
         let saturation_start = hsla(hue, 0.0, lightness, 1.0);
