@@ -206,9 +206,15 @@ files, a test-only `Eq` bound unsupported by GPUI-CE colors, a manifest fixture
 pinned to the predecessor shell version, and a palette-change fixture that
 assigned the default color to itself. `911ed35d` corrects those target and test
 compatibility issues without changing component behavior. Its exact-head hosted
-rerun, full workspace, all-target, cross-platform, example/story, shell, and Jig
-application-level verification remain pending. The evidence refs are published;
-the runtime and component adoption tags remain pending.
+rerun (`33561397709` at `7acff3969f7f15a56b20fc26d0b880443152e384`)
+passed documentation, Component Shell, Shell Core, and the Standard Runtime
+matrix on macOS, Linux, and Windows. The three full Test jobs all reached the
+same remaining ambiguity in the brush story between GPUI's current
+`StatefulInteractiveElement::on_prepaint` and the component extension trait.
+`d06e5352` explicitly selects `gpui_component::ElementExt::on_prepaint`,
+preserving the original canvas-bounds callback semantics. Its exact-head hosted
+rerun and Jig application-level verification remain pending. The evidence refs
+are published; the runtime and component adoption tags remain pending.
 
 ## Bounded external review record
 
