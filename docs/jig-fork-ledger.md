@@ -314,6 +314,38 @@ runtime source. The reviewer independently confirmed that the pending-read
 regression retains the production transport assertions and does not hide a
 socket actor failure.
 
+## Lock audit follow-up after component adoption `.2`
+
+Component merge `10af28396e3d34145a287f1060ebb48dbd7abf2c` remains
+recoverable through immutable tag `jig-adopted/component-2026-09-01.2`. A
+follow-up refresh removes lock-only vulnerable versions that the resolved
+workspace does not use: `xcb` 1.7.1 replaces 1.7.0 and removes `quick-xml`
+0.30.0, while `quinn-proto` 0.11.15 replaces 0.11.14. These are
+package-specific Cargo updates; the lock was not regenerated or hand edited.
+The resulting lockfile SHA-256 is
+`6d32536a58e6dd59c2da8b0056242c5499a7a89dea0afd762062237a4264f6c7`.
+
+`RUSTSEC-2026-0235` is the only audit exception. `rust_decimal` 1.x exposes an
+optional, disabled compatibility feature pinned to `rkyv` 0.7, and Cargo keeps
+that optional package in the lock even though this workspace never enables the
+feature. The upstream `rust_decimal` documentation states that its `rkyv`
+feature intentionally remains on 0.7 for compatibility and recommends remote
+derives for rkyv 0.8; RustSec states that all rkyv 0.7 releases are affected
+and that the maintained fix is 0.8.17 or later. The Cargo Audit job therefore
+ignores only this advisory and first runs
+`cargo tree --locked --target all --workspace --all-features -i rkyv@0.7.46`.
+It fails if the package becomes reachable, disappears from the lock, or changes
+identity. Remove both the exception and guard as soon as `rust_decimal` no
+longer retains this compatibility edge; do not expand the exception to any
+other advisory or package.
+
+The pending-read WebSocket regression also drives the foreground executor
+until the server reports the exact pong, text, and close tuple. This removes a
+test-only deadlock in which joining the server stopped the executor before the
+close promise could resume; the rendered promise-settlement assertion remains
+required afterward. Hosted full-workspace execution is the proof boundary
+because shared disk pressure precluded another local shell build.
+
 ## Adoption and publication gates
 
 ### Distribution boundary
