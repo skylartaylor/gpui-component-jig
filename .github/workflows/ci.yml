@@ -15,6 +15,9 @@ jobs:
   cargo-audit:
     name: Cargo Audit
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -23,7 +26,7 @@ jobs:
         run: |
           tree_output="$(cargo tree --locked --target all --workspace --all-features -i rkyv@0.7.46 2>&1)" || {
             printf '%s\n' "$tree_output"
-            echo "rkyv 0.7.46 is no longer in Cargo.lock; remove the audit exception and this guard"
+            echo "inspect Cargo.lock: remove the exception if rkyv is fixed or absent; otherwise re-pin this guard"
             exit 1
           }
           printf '%s\n' "$tree_output"
@@ -34,7 +37,6 @@ jobs:
       - uses: rustsec/audit-check@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          ignore: RUSTSEC-2026-0235
 
   security-advisories:
     name: Security Advisories

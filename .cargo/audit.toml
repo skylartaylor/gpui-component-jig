@@ -1,0 +1,4 @@
+[advisories]
+# rust_decimal 1.x retains this disabled rkyv 0.7 compatibility edge in the
+# lock. CI separately fails if the edge becomes reachable; see the fork ledger.
+ignore = ["RUSTSEC-2026-0235"]

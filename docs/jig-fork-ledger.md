@@ -322,6 +322,9 @@ follow-up refresh removes lock-only vulnerable versions that the resolved
 workspace does not use: `xcb` 1.7.1 replaces 1.7.0 and removes `quick-xml`
 0.30.0, while `quinn-proto` 0.11.15 replaces 0.11.14. These are
 package-specific Cargo updates; the lock was not regenerated or hand edited.
+The xcb update requires `bitflags` 2.13.1, so Cargo also rewrites dependency
+references from 2.11.1 and re-resolves three existing `windows-sys` references
+from 0.52.0 to the already-locked 0.59.0. No other package version changes.
 The resulting lockfile SHA-256 is
 `6d32536a58e6dd59c2da8b0056242c5499a7a89dea0afd762062237a4264f6c7`.
 
@@ -338,6 +341,13 @@ It fails if the package becomes reachable, disappears from the lock, or changes
 identity. Remove both the exception and guard as soon as `rust_decimal` no
 longer retains this compatibility edge; do not expand the exception to any
 other advisory or package.
+
+The existing cargo-deny job evaluates the reachable standalone workspace graph
+and remains exception-free; Cargo Audit intentionally scans every record in
+the standalone lock and therefore owns this one guarded exception. These jobs
+do not claim to audit the runtime-patched graph. The exact-runtime test matrix
+separately checks out and patches all four GPUI-CE crates at the paired runtime
+commit before compiling the component workspace.
 
 The pending-read WebSocket regression also drives the foreground executor
 until the server reports the exact pong, text, and close tuple. This removes a

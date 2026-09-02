@@ -780,7 +780,8 @@ fn websocket_pending_read_does_not_block_write_or_close(cx: &mut TestAppContext)
         let mut saw_pong = false;
         let mut saw_text = false;
         let mut saw_close = false;
-        for _ in 0..3 {
+        let deadline = std::time::Instant::now() + Duration::from_secs(10);
+        while !(saw_pong && saw_text && saw_close) {
             match socket.read() {
                 Ok(Message::Pong(bytes)) if bytes.as_ref() == [7] => saw_pong = true,
                 Ok(Message::Text(text)) if text == "while read is pending" => {
@@ -789,8 +790,20 @@ fn websocket_pending_read_does_not_block_write_or_close(cx: &mut TestAppContext)
                 }
                 Ok(message) if message.is_close() => saw_close = true,
                 Ok(_) => {}
-                Err(_) => break,
+                Err(tungstenite::Error::Io(error))
+                    if matches!(
+                        error.kind(),
+                        std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
+                    ) => {}
+                Err(error) => panic!("server WebSocket read: {error}"),
             }
+            if saw_pong && saw_text && saw_close {
+                break;
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "timed out waiting for client WebSocket events"
+            );
         }
         let events = (saw_pong, saw_text, saw_close);
         let _ = server_events.send(events);
@@ -802,7 +815,7 @@ fn websocket_pending_read_does_not_block_write_or_close(cx: &mut TestAppContext)
     let (_runtime, view, mut context) = probe(cx, &source);
     context.run_until_parked();
     text_receiver
-        .recv_timeout(Duration::from_millis(500))
+        .recv_timeout(Duration::from_secs(10))
         .expect("client write while read is pending");
     let deadline = std::time::Instant::now() + Duration::from_secs(10);
     let server_events = loop {
@@ -823,6 +836,7 @@ fn websocket_pending_read_does_not_block_write_or_close(cx: &mut TestAppContext)
     };
     assert_eq!(server_events, (true, true, true));
     assert_eq!(server.join().expect("WebSocket server"), server_events);
+    let deadline = std::time::Instant::now() + Duration::from_secs(10);
     loop {
         context.executor().advance_clock(Duration::from_millis(10));
         context.run_until_parked();
