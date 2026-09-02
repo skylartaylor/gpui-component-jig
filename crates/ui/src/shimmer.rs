@@ -628,12 +628,12 @@ mod tests {
 
         let animation = loading_animation(Duration::from_secs(3), false);
         assert_eq!(animation.motion.duration, Duration::from_secs(3));
-        assert!(animation.synced);
+        assert!(animation.is_synced());
         assert_eq!(animation.motion.repeat, gpui::Repeat::Forever);
 
         let animation = loading_animation(Duration::from_secs(3), true);
         assert_eq!(animation.motion.duration, Duration::from_secs(3));
         assert_eq!(animation.motion.repeat, gpui::Repeat::Once);
-        assert!(!animation.synced);
+        assert!(!animation.is_synced());
     }
 }
